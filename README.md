@@ -17,18 +17,18 @@
 
 ## What is RU SnipeZ?
 
-Getting into a closed Rutgers course section is a race against hundreds of other students. **RU SnipeZ** removes the guesswork entirely.
+Getting into a Rutgers course section is a race against hundreds of other students. **RU SnipeZ** removes the guesswork entirely.
 
-It continuously monitors the **Rutgers WebReg system** and **Schedule of Classes (SoC) API**, and the moment a desired section opens, it fires a Discord notification with a **pre-filled registration link** directly to you. No copy-pasting index numbers. No fumbling around. Just click and register.
+It continuously monitors the **Rutgers WebReg system** and **Schedule of Classes (SoC) API**, and the moment a desired section opens, it fires a Discord notification with a **pre-filled registration link** directly to you. No copy-pasting index numbers. No fumbling around. Just click and register. It also provides insightful information such as when a course section last opened.
 
 ---
 
 ## How It Works
 
 1. You add a course section to your personal snipe list via Discord
-2. The bot watches the Rutgers SoC API in real time
+2. The bot watches the Rutgers SoC API in real time, tracking 25,000+ course sections by the second.
 3. The instant a section opens, you receive a Discord DM with a direct WebReg registration link, index number pre-filled
-4. You click, confirm, and you're in
+4. You click, confirm, and you're in. Perfect schedule secured!
 
 ---
 
@@ -46,17 +46,22 @@ It continuously monitors the **Rutgers WebReg system** and **Schedule of Classes
 
 ![Remove Command](screenshots/remove_command.PNG)
 
+**Sample notification of a user's course opening**
+
+![Sample Notification](screenshots/sample_noti.PNG)
+
+
 ---
 
 ## Features
 
-- Real-time polling of the Rutgers Schedule of Classes API
-- Instant Discord DM notifications on section open
-- Pre-filled WebReg registration links to eliminate manual input
-- Per-user snipe lists stored persistently
-- Logging of all bot commands and events
-- Semester-aware course data generation via ChromeDriver
-- Lightweight JSON-based data storage, no database setup needed
+- Real-time polling of the Rutgers Schedule of Classes API 
+- Instant Discord DM notifications on section open (Sub-second response time)
+- Pre-filled WebReg registration links to eliminate manual input by users
+- Per-user snipe lists are stored persistently, tracked by Discord Unique User ID.
+- Caching of course openings/closing to determine last opened status, a valuable feature Rutgers University API does not offer on its own!
+- Logging of all bot commands and events, for auditability purposes.
+- Semester-aware course data generation via BeautifulSoup4, Selenium, and ChromeDriver. Always have up-to-date course information.
 
 ---
 
