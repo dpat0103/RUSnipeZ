@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RU SnipeZ — live Rutgers section monitor</title>
+<meta name="description" content="Live open-seat monitor for Rutgers course sections. Search 16,000+ sections across all three campuses and see which are open right now.">
+<link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css?v=430dcf1c">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <img src="logo.png" alt="">
+      <div>
+        <h1>RU SnipeZ</h1>
+        <span class="sub" id="term-label">Fall 2026 · New Brunswick</span>
+      </div>
+    </div>
+
+    <nav class="tabs" aria-label="Views">
+      <a href="#monitor" data-view="monitor" aria-current="page">Monitor</a>
+      <a href="#how" data-view="how">How it works</a>
+      <a href="#about" data-view="about">About</a>
+    </nav>
+
+    <div class="live" id="live-stats">
+      <div class="stat">
+        <span class="v accent" id="stat-open">—</span>
+        <span class="k">open now</span>
+      </div>
+      <div class="stat">
+        <span class="v" id="stat-sections">—</span>
+        <span class="k">sections</span>
+      </div>
+      <div class="stat">
+        <span class="v" id="stat-watching">0</span>
+        <span class="k">watching</span>
+      </div>
+      <span class="pulse" id="pulse" data-state="loading">
+        <span class="dot"></span>
+        <span id="pulse-text">connecting…</span>
+      </span>
+    </div>
+  </div>
+</header>
+
+<!-- ============================ MONITOR ============================ -->
+<div id="view-monitor">
+  <div class="controls">
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+      </svg>
+      <input id="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search by course, code, professor or index — try “data structures”, “198”, or 10052">
+    </label>
+
+    <select id="campus" aria-label="Campus">
+      <option value="NB">New Brunswick</option>
+      <option value="NK">Newark</option>
+      <option value="CM">Camden</option>
+    </select>
+
+    <select id="core" aria-label="Core requirement">
+      <option value="">Any core code</option>
+    </select>
+
+    <button class="toggle" id="t-open" aria-pressed="false">
+      <span class="box"></span> Open only
+    </button>
+    <button class="toggle" id="t-spn" aria-pressed="false">
+      <span class="box"></span> Hide SPN-required
+    </button>
+  </div>
+
+  <main class="wrap">
+    <section aria-labelledby="results-label">
+      <p class="resultmeta" id="results-label">Loading catalogue…</p>
+      <div class="courses" id="results">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Watchlist</h2>
+          <button class="linkbtn" id="clear-watch" title="Clear watchlist" hidden>✕</button>
+        </div>
+        <div class="panel-body tight" id="watchlist"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Live activity</h2>
+          <span class="wl-sub" id="poll-count">0 polls</span>
+        </div>
+        <div class="panel-body tight">
+          <div class="feed" id="feed"></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<!-- ========================== HOW IT WORKS ========================== -->
+<article class="prose" id="view-how" hidden>
+
+  <section>
+    <span class="eyebrow">Architecture</span>
+    <h2>One request that matters, cached at the edge</h2>
+    <p class="lede-big">Rutgers publishes an unauthenticated list of currently-open section indexes. WebReg accepts a registration index pre-filled in the URL. Everything here exists to close the gap between <em>a seat opened</em> and <em>you have a registration form loaded</em>.</p>
+  </section>
+
+  <div class="diagram">
+    <svg viewBox="0 0 660 286" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Data flow: a nightly CI job builds a static catalogue; the browser polls the open-sections endpoint through an edge proxy every 30 seconds and diffs it against the previous set.">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#6B7280"/>
+        </marker>
+      </defs>
+      <g font-family="JetBrains Mono, monospace">
+
+        <!-- upstream -->
+        <rect x="6" y="26" width="150" height="58" rx="7" fill="#2B1017" stroke="#FF3B5C"/>
+        <text x="18" y="45" fill="#FF3B5C" font-size="8.5" letter-spacing="1">UPSTREAM · DAILY</text>
+        <text x="18" y="61" fill="#E9EBEF" font-size="11" font-weight="600">courses.json</text>
+        <text x="18" y="75" fill="#6B7280" font-size="9">930 KB · full catalogue</text>
+
+        <rect x="6" y="180" width="150" height="58" rx="7" fill="#2B1017" stroke="#FF3B5C"/>
+        <text x="18" y="199" fill="#FF3B5C" font-size="8.5" letter-spacing="1">UPSTREAM · LIVE</text>
+        <text x="18" y="215" fill="#E9EBEF" font-size="11" font-weight="600">openSections.json</text>
+        <text x="18" y="229" fill="#6B7280" font-size="9">26 KB · open indexes</text>
+
+        <!-- ci -->
+        <path d="M158,55 L214,55" stroke="#6B7280" stroke-width="1.2" marker-end="url(#a2)"/>
+        <rect x="220" y="26" width="158" height="58" rx="7" fill="#14161B" stroke="#272B35"/>
+        <text x="232" y="45" fill="#6B7280" font-size="8.5" letter-spacing="1">GITHUB ACTIONS</text>
+        <text x="232" y="61" fill="#E9EBEF" font-size="11" font-weight="600">catalogue build</text>
+        <text x="232" y="75" fill="#6B7280" font-size="9">normalize · collapse days</text>
+
+        <path d="M380,55 L436,55" stroke="#6B7280" stroke-width="1.2" marker-end="url(#a2)"/>
+        <rect x="442" y="26" width="150" height="58" rx="7" fill="#14203A" stroke="#6BA4FF"/>
+        <text x="454" y="45" fill="#6BA4FF" font-size="8.5" letter-spacing="1">STATIC · CDN</text>
+        <text x="454" y="61" fill="#E9EBEF" font-size="11" font-weight="600">catalog.json</text>
+        <text x="454" y="75" fill="#6B7280" font-size="9">349 KB gzip · 27 ms parse</text>
+
+        <!-- proxy -->
+        <path d="M158,209 L214,209" stroke="#6B7280" stroke-width="1.2" marker-end="url(#a2)"/>
+        <rect x="220" y="180" width="158" height="58" rx="7" fill="#14161B" stroke="#272B35"/>
+        <text x="232" y="199" fill="#6B7280" font-size="8.5" letter-spacing="1">PAGES FUNCTION</text>
+        <text x="232" y="215" fill="#E9EBEF" font-size="11" font-weight="600">/api/open</text>
+        <text x="232" y="229" fill="#6B7280" font-size="9">CORS + 30 s edge cache</text>
+
+        <path d="M380,209 L436,209" stroke="#6B7280" stroke-width="1.2" marker-end="url(#a2)"/>
+
+        <!-- browser -->
+        <rect x="442" y="110" width="212" height="154" rx="7" fill="#14161B" stroke="#272B35"/>
+        <text x="454" y="130" fill="#6B7280" font-size="8.5" letter-spacing="1">BROWSER</text>
+        <text x="454" y="147" fill="#E9EBEF" font-size="11" font-weight="600">diff vs. previous set</text>
+        <text x="454" y="162" fill="#6B7280" font-size="9">2 ms for 11,444 indexes</text>
+
+        <rect x="454" y="176" width="188" height="32" rx="5" fill="#0F2A1F" stroke="#3DD68C"/>
+        <text x="466" y="196" fill="#3DD68C" font-size="10" font-weight="600">newly opened → alert</text>
+
+        <rect x="454" y="216" width="188" height="32" rx="5" fill="#1B1E25" stroke="#272B35"/>
+        <text x="466" y="236" fill="#A6ACB9" font-size="10">still open → stays quiet</text>
+
+        <path d="M540,86 L540,106" stroke="#6B7280" stroke-width="1.2" marker-end="url(#a2)"/>
+      </g>
+    </svg>
+  </div>
+
+  <section>
+    <h3>Why the split</h3>
+    <p>Course titles, professors and meeting times change roughly never during a term, so they are built <strong>once a day</strong> into a static file and served from a CDN. Only the open/closed set is live, and it is 26 KB. The page is not re-downloading 4.8 MB every thirty seconds — it fetches a small array of index numbers and diffs it in memory.</p>
+    <p>The diff is what makes it <strong>edge-triggered</strong>: a section that was already open does not re-announce itself. V1 solved that problem with a per-user ten-minute cooldown; comparing against the previous set removes the need for one.</p>
+  </section>
+
+  <div class="factgrid">
+    <div class="fact"><span class="v">27 ms</span><span class="k">catalogue parse</span></div>
+    <div class="fact"><span class="v">2 ms</span><span class="k">per-poll diff</span></div>
+    <div class="fact"><span class="v">349 KB</span><span class="k">gzipped catalogue</span></div>
+    <div class="fact"><span class="v">30 s</span><span class="k">poll interval</span></div>
+  </div>
+
+  <section>
+    <span class="eyebrow">Findings</span>
+    <h2>What the undocumented API actually does</h2>
+    <p>Rutgers publishes no API documentation. Everything below was established by inspection, and each one changed a design decision.</p>
+
+    <div class="findlist">
+      <div class="find">
+        <h4><code>courses.json</code> ignores its own <code>subject</code> parameter</h4>
+        <p>One request returns the entire campus catalogue. V1 drove a headless Chrome browser across fifteen school pages, waiting ten seconds each, to scrape a <em>subset</em> of the same data out of rendered HTML — data the page had itself fetched as JSON moments earlier. That pipeline is gone.</p>
+      </div>
+      <div class="find">
+        <h4>Index numbers are recycled between terms</h4>
+        <p>3,059 index numbers from Spring 2025 also appear in Fall 2026 — attached to entirely different courses. <code>10052</code> is <code>LITERARY EGYPT</code> this term and was something else last term. Any stored history has to be scoped per term or it silently corrupts at every rollover.</p>
+      </div>
+      <div class="find">
+        <h4>Cross-listed sections open independently</h4>
+        <p>Of 970 cross-listed pairs in Fall 2026, <strong>254 are currently split</strong> — one index open, its twin closed. They are the same class under two department codes, but the seat pools track separately, so watching one does not cover the other.</p>
+      </div>
+      <div class="find">
+        <h4>24% of sections need a special permission number</h4>
+        <p>2,902 of 12,004 New Brunswick sections carry a non-null <code>specialPermissionAddCode</code>. An open seat in one of those is <em>not</em> registrable without departmental approval, so they are badged <span class="badge spn">SPN</span> rather than treated as a normal opening.</p>
+      </div>
+      <div class="find">
+        <h4>No CORS headers, and a 30-second cache</h4>
+        <p>The endpoints send no <code>Access-Control-Allow-Origin</code>, so a browser cannot call them from a page — hence the proxy. They also advertise <code>Cache-Control: max-age=30</code>, which sets the floor on useful polling. An <code>ETag</code> is sent but <code>If-None-Match</code> is ignored, so conditional requests buy nothing.</p>
+      </div>
+      <div class="find">
+        <h4>Course titles are aggressively abbreviated</h4>
+        <p>Expository Writing is filed as <code>COLLEGE WRITING</code>; you will also find <code>MICROBIOL HLTH SCI</code> and <code>ADV ORGANIC CHEM I</code>. Exact matching returns nothing for the names students actually type, so search is relevance-ranked instead — tokens scored independently across index, code, title, instructor and subject, with abbreviations expanded and stopwords dropped.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">Stack</span>
+    <h2>What runs where</h2>
+    <div class="tablewrap">
+      <table class="spec">
+        <thead><tr><th>Layer</th><th>Choice</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Catalogue build</td><td>Python 3.12, httpx, GitHub Actions</td><td>One HTTP request per campus, on a daily cron. No browser, no binary.</td></tr>
+          <tr><td>Normalizer</td><td>Pure functions, 43 unit tests</td><td>Collapses per-day meeting entries, handles Rutgers day codes where <code>H</code> is Thursday.</td></tr>
+          <tr><td>Proxy</td><td>Cloudflare Pages Functions</td><td>Same origin as the page, so no cross-origin request is made at all. One origin fetch serves every visitor in the 30 s window.</td></tr>
+          <tr><td>Frontend</td><td>Vanilla JS, no framework</td><td>The whole app is a filter over one array and a set diff. A framework would be more bytes than the logic.</td></tr>
+          <tr><td>Hosting</td><td>Cloudflare Pages free tier</td><td>Static files plus two edge functions. Nothing to keep running, nothing to pay for.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</article>
+
+<!-- ============================= ABOUT ============================= -->
+<article class="prose" id="view-about" hidden>
+  <section>
+    <span class="eyebrow">About</span>
+    <h2>What this is, and what it isn't</h2>
+    <p class="lede-big">RU SnipeZ watches Rutgers course sections and tells you the moment a seat opens — with the registration link already filled in. This page is the live, public demo of the monitoring engine.</p>
+  </section>
+
+  <section>
+    <h3>What you're looking at</h3>
+    <p>Everything on the Monitor tab is <strong>real data, right now</strong>. The catalogue is built daily from the Rutgers Schedule of Classes API, and the open/closed status refreshes every thirty seconds against the live endpoint. Pressing <strong>Watch</strong> shows you exactly the alert you would receive, including a working WebReg link with the index pre-filled.</p>
+  </section>
+
+  <div class="callout">
+    <span class="eyebrow">Honest limitation</span>
+    <p>This demo watches sections <strong>only while this tab is open</strong>. Your watchlist is stored in your own browser and never leaves it, which also means it does not follow you to another device. Real background alerts — push notifications that reach you with the tab closed — need an always-on server, and that is the next milestone rather than something this page does today.</p>
+  </div>
+
+  <section>
+    <h3>Things worth knowing before you rely on it</h3>
+    <ul>
+      <li>A section badged <strong>SPN</strong> needs a special permission number from the department. An open seat there is not registrable on its own — and that is 24% of New Brunswick sections.</li>
+      <li>A section badged <strong>XL</strong> is cross-listed under a second department code with its own index. The two open and close independently, so it is usually worth watching both.</li>
+      <li>Open/closed reflects what the university's own endpoint reports, cached up to thirty seconds. It is as current as the Schedule of Classes website is.</li>
+      <li>Outside registration periods most sections sit still, so the activity feed will mostly log quiet polls. That is the system working, not a bug.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h3>Where it stops, deliberately</h3>
+    <p>RU SnipeZ <strong>notifies</strong>. It does not register for you, and it never asks for, stores, or transmits a NetID or password. You sign in to WebReg through CAS yourself, exactly as you normally would — the only thing the link does is save you from typing the index. That line is a design constraint, not an unfinished feature.</p>
+    <p>It reads the same public endpoints the Schedule of Classes website reads, caches responses at the edge so one request serves every visitor, and polls no faster than the university's own cache header invites.</p>
+  </section>
+
+  <section>
+    <h3>Built by</h3>
+    <p>A Rutgers student who got tired of refreshing WebReg. V1 ran as a Discord bot serving a student community; this is the rebuilt engine behind it, now with a public interface. The full source, including the architecture notes and the API findings on the <a href="#how">How it works</a> page, is on <a href="https://github.com/dpat0103" rel="noopener">GitHub</a>.</p>
+  </section>
+</article>
+
+<dialog id="alert-dlg">
+  <div class="dlg-head">
+    <h3>Alert preview</h3>
+    <button class="linkbtn" id="dlg-close" aria-label="Close">✕</button>
+  </div>
+  <div class="dlg-body" id="dlg-body"></div>
+</dialog>
+
+<footer>
+  <span>Live data from the Rutgers Schedule of Classes API.</span>
+  <span>Notifies only — never asks for your NetID.</span>
+  <a href="https://github.com/dpat0103" rel="noopener">Source</a>
+</footer>
+
+<script src="app.js?v=efd12c70"></script>
+</body>
+</html>

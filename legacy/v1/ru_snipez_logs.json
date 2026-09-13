@@ -1,0 +1,118 @@
+{
+    "07-13-2024 03:26:27 PM EST": {
+        "log_info": "Invalid snipe set by enter_user_name_here#0",
+        "status_code": 400
+    },
+    "07-13-2024 03:30:24 PM EST": {
+        "log_info": "Invalid snipe set by enter_user_name_here#0",
+        "status_code": 400
+    },
+    "07-13-2024 03:32:00 PM EST": {
+        "log_info": "Invalid snipe set by enter_user_name_here#0",
+        "status_code": 400
+    },
+    "07-13-2024 03:32:52 PM EST": {
+        "log_info": "Invalid snipe set by enter_user_name_here#0",
+        "status_code": 400
+    },
+    "07-13-2024 03:33:02 PM EST": {
+        "log_info": "Invalid snipe set by enter_user_name_here#0",
+        "status_code": 400
+    },
+    "07-13-2024 04:30:04 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here#0",
+        "status_code": 200
+    },
+    "07-13-2024 04:30:13 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here#0",
+        "status_code": 200
+    },
+    "08-09-2024 10:51:00 PM EST": {
+        "log_info": "Invalid snipe set by enter_user_name_here#0",
+        "status_code": 400
+    },
+    "08-09-2024 10:51:09 PM EST": {
+        "log_info": "Invalid snipe set by enter_user_name_here#0",
+        "status_code": 400
+    },
+    "08-09-2024 11:08:21 PM EST": {
+        "log_info": "Snipe set by enter_user_name_here#0 for INTRODUCTION TO DISCRETE STRUCTURES I at SECTION 02 on INDEX 07569",
+        "status_code": 200
+    },
+    "08-09-2024 11:09:58 PM EST": {
+        "log_info": "Received /remove request by enter_user_name_here#0 for INTRODUCTION TO DISCRETE STRUCTURES I at SECTION 02 on INDEX 07569",
+        "status_code": 200
+    },
+    "08-09-2024 11:10:02 PM EST": {
+        "log_info": "Snipe set by enter_user_name_here#0 for INTRODUCTION TO DISCRETE STRUCTURES I at SECTION 02 on INDEX 07569",
+        "status_code": 200
+    },
+    "08-09-2024 11:10:31 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here#0",
+        "status_code": 200
+    },
+    "08-09-2024 11:15:26 PM EST": {
+        "log_info": "Snipe set by enter_user_name_here#0 for COMPUTER APPLICATIONS FOR BUSINESS at SECTION 03 on INDEX 07538",
+        "status_code": 200
+    },
+    "08-09-2024 11:15:35 PM EST": {
+        "log_info": "Snipe set by enter_user_name_here#0 for DATA MANAGEMENT FOR DATA SCIENCE at SECTION 06 on INDEX 07590",
+        "status_code": 200
+    },
+    "08-09-2024 11:15:40 PM EST": {
+        "log_info": "Snipe set by enter_user_name_here#0 for INTRODUCTION TO DISCRETE STRUCTURES II at SECTION 04 on INDEX 24451",
+        "status_code": 200
+    },
+    "08-09-2024 11:15:45 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here#0",
+        "status_code": 200
+    },
+    "08-09-2024 11:21:30 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here#0",
+        "status_code": 200
+    },
+    "08-09-2024 11:22:29 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here#0",
+        "status_code": 200
+    },
+    "08-09-2024 11:23:40 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here#0",
+        "status_code": 200
+    },
+    "08-09-2024 11:24:23 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here#0",
+        "status_code": 200
+    },
+    "08-09-2024 11:26:20 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here#0",
+        "status_code": 200
+    },
+    "12-20-2024 06:49:21 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here",
+        "status_code": 200
+    },
+    "12-25-2024 07:38:40 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here",
+        "status_code": 200
+    },
+    "12-25-2024 07:38:50 PM EST": {
+        "log_info": "Recieved /clear by enter_user_name_here",
+        "status_code": 200
+    },
+    "12-25-2024 07:39:05 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here",
+        "status_code": 200
+    },
+    "12-25-2024 07:39:37 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here",
+        "status_code": 200
+    },
+    "12-25-2024 07:39:56 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here",
+        "status_code": 200
+    },
+    "12-25-2024 07:41:18 PM EST": {
+        "log_info": "Recieved /check by enter_user_name_here",
+        "status_code": 200
+    }
+}

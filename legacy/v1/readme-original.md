@@ -1,0 +1,48 @@
+<div style="text-align: center;">
+  <img src="Ru_snipez_logo.png" alt="Logo" width="300" height="300" />
+</div>
+
+**Introduction**:
+
+RU SnipeZ is a bot that allows users to be able to snag desired course sections of any course at Rutgers University campuses, within seconds of opening.
+
+It actively monitors the Rutgers WebReg system and SoC API, utilizing Python as the main langauge.
+
+The Discord User is notified with a registration link with Index pre filled in order to minimize additional input that would normally slow down ability to get course.
+
+
+
+---
+**All FIles Explained**:
+
+main.py - main file that contains essential commands for the bot and other necessities for it to be able to run on Discord via discord.py
+
+dataStorage.py - file pertaining to data storage for users.
+
+course_info_generation.py - file that contains seperate program to obtain up to date course infomation for each Rutgers school for the specified semester
+
+manipulatingdata.py - additional functions necessary for bot to have up to date information when being run or restarted.
+
+last_opened.py - everything related to figuring out when a course section last opened in the Rutgers WebReg and Schedule of Classes system.
+
+utils.py - additional logistics functions for things like logging and timestamps
+
+user_data.json - simple database which holds all user's snipe lists
+
+ru_snipez_logs.json - simple json file that contains logs for when commands are run.
+
+requirements.txt - all necessary modules that must be imported prior to running bot
+
+
+
+---
+**Technologies Required/Used**:
+
+Latest Version Of Python
+Latest Verison of Chromedriver (Not necessary for bot to run, but to generate up to date course information for a semester)
+Discord Developer Portal API Key
+
+
+
+
+

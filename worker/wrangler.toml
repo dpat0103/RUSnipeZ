@@ -1,0 +1,8 @@
+name = "ru-snipez-api"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Comma-separated origins allowed to call this proxy, or "*" while developing.
+# Tighten this to your deployed frontend before going public.
+[vars]
+ALLOWED_ORIGINS = "*"

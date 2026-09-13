@@ -1,0 +1,30 @@
+# secrets — never commit
+.env
+.env.*
+!.env.example
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# generated catalogue data
+data/*.json
+!data/.gitkeep
+
+# node / worker
+node_modules/
+.wrangler/
+
+# never commit browser binaries
+chromedriver*
+*.exe
+
+# os
+Thumbs.db
+.DS_Store

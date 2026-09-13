@@ -1,0 +1,55 @@
+name: catalog
+
+# The catalogue changes when departments add or retitle sections, which is
+# rare mid-semester and constant during registration. Daily is plenty; the
+# live open/closed status comes from the polling endpoint, not from here.
+on:
+  schedule:
+    - cron: "17 8 * * *"   # 08:17 UTC daily
+  workflow_dispatch:
+    inputs:
+      term:
+        description: "WebReg term code (e.g. 92026)"
+        required: false
+        default: "92026"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        campus: [NB, NK, CM]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      - run: uv pip install --system -e .
+
+      - name: Build catalogue
+        run: |
+          python -m rusnipez.catalog.build \
+            --term "${{ inputs.term || '92026' }}" \
+            --campus "${{ matrix.campus }}" \
+            --out data
+
+      - name: Sanity check the output
+        run: |
+          python - <<'PY'
+          import json, pathlib, sys
+          for path in pathlib.Path("data").glob("catalog-*.json"):
+              data = json.loads(path.read_text(encoding="utf-8"))
+              counts = data["meta"]["counts"]
+              print(f"{path.name}: {counts['courses']} courses, {counts['sections']} sections")
+              if counts["courses"] < 100:
+                  sys.exit(f"{path.name} looks truncated — refusing to publish")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: catalog-${{ matrix.campus }}
+          path: data/catalog-*.json
+          retention-days: 7
+
+      # TODO: once the frontend exists, replace the artifact upload with a
+      # Cloudflare Pages deploy so the built catalogue ships with the site.

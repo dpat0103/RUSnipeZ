@@ -1,0 +1,36 @@
+[project]
+name = "rusnipez"
+version = "2.0.0.dev0"
+description = "Rutgers course section monitor — catalogue builder, polling engine and notifiers."
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "respx>=0.21", "ruff>=0.6"]
+
+[project.scripts]
+rusnipez-catalog = "rusnipez.catalog.build:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rusnipez"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# Reference archive of the original bot; not maintained, not linted.
+exclude = ["legacy"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
