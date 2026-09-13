@@ -6,6 +6,11 @@
 <title>RU SnipeZ — live Rutgers section monitor</title>
 <meta name="description" content="Live open-seat monitor for Rutgers course sections. Search 16,000+ sections across all three campuses and see which are open right now.">
 <link rel="icon" href="logo.png">
+<!-- Where the open-sections proxy lives. Empty means same origin, which is the
+     case on Cloudflare Pages where /api runs as an edge function. On a purely
+     static host such as GitHub Pages, set this to your deployed Worker origin,
+     for example https://ru-snipez-api.<subdomain>.workers.dev -->
+<meta name="api-base" content="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600&display=swap">
@@ -269,6 +274,12 @@
       </div>
 
       <div class="decision">
+        <h3>Trust the catalogue, not the query parameters</h3>
+        <p>Two of the upstream endpoints accept parameters they then ignore. The catalogue endpoint takes a subject and returns the whole campus regardless, and the open-sections endpoint takes a campus and returns every open index university wide, all 11,444 of them, whichever campus you ask for.</p>
+        <p>So campus scoping happens here rather than upstream: the open set is intersected against the catalogue actually loaded, which is the only authoritative statement of what belongs to a campus. Counting the raw response instead would report New Brunswick's total on the Camden page. Filtering on the client is normally a smell, and it is the correct answer when the server's filter does not exist.</p>
+      </div>
+
+      <div class="decision">
         <h3>Every stored record is keyed to a term</h3>
         <p>Rutgers reuses index numbers between terms. 3,059 of the index numbers valid in one recent term are also valid in another, attached to entirely different courses. An index alone is not a stable identifier for anything.</p>
         <p>So the composite key is <code>(term, campus, index)</code> everywhere state is written. Historical records stay interpretable across a rollover, and a query can never silently return a row that describes a different class than the one it was written for.</p>
@@ -406,6 +417,6 @@
   <a href="https://github.com/dpat0103" rel="noopener">Source</a>
 </footer>
 
-<script src="app.js?v=c6584f62"></script>
+<script src="app.js?v=c41a1602"></script>
 </body>
 </html>

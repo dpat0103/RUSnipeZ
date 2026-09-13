@@ -21,6 +21,12 @@ const PAGE_SIZE = 40;
 const MAX_EVENTS = 60;
 const WEBREG = `https://sims.rutgers.edu/webreg/editSchedule.htm?login=cas&semesterSelection=${TERM}&indexList=`;
 const STORAGE_KEY = "rusnipez.watch.v1";
+
+// Empty means same origin, which is how it runs on a host with edge functions.
+// A static host (GitHub Pages) points this at a deployed Worker instead.
+const API_BASE = (
+  document.querySelector('meta[name="api-base"]')?.content || ""
+).replace(/\/$/, "");
 const INTRO_KEY = "rusnipez.intro.dismissed.v1";
 
 const LOCATION_NAMES = {
@@ -193,7 +199,7 @@ function fillSelect(select, options, placeholder) {
 async function poll() {
   setPulse("loading", "checking…");
   try {
-    const response = await fetch(`/api/open?term=${TERM}&campus=${state.campus}`);
+    const response = await fetch(`${API_BASE}/api/open?term=${TERM}&campus=${state.campus}`);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const indexes = await response.json();
     applyOpenSet(new Set(indexes.map(String)));
@@ -214,7 +220,12 @@ async function poll() {
 function applyOpenSet(next) {
   const previous = state.open;
   state.open = next;
-  el.statOpen.textContent = num(next.size);
+
+  // The upstream endpoint ignores its campus parameter and returns every open
+  // index university-wide, so the headline count is only meaningful once
+  // intersected with the catalogue actually loaded.
+  const openHere = [...next].filter((i) => state.sectionsByIndex.has(i)).length;
+  el.statOpen.textContent = num(openHere);
 
   const now = new Date();
   for (const index of next) state.seenOpen.set(index, now);
@@ -223,7 +234,7 @@ function applyOpenSet(next) {
     state.seenBaseline = true;
     pushEvent({
       kind: "baseline",
-      text: `Watching <strong>${num(next.size)}</strong> open sections across ${CAMPUS_NAMES[state.campus]}`,
+      text: `Watching <strong>${num(openHere)}</strong> open sections in ${CAMPUS_NAMES[state.campus]}`,
     });
     renderResults();
     renderWatchlist();
@@ -249,7 +260,7 @@ function applyOpenSet(next) {
     });
   }
   if (opened.length === 0 && closed.length === 0) {
-    pushEvent({ kind: "tick", text: `No change, ${num(next.size)} open` });
+    pushEvent({ kind: "tick", text: `No change, ${num(openHere)} open` });
   }
 
   renderResults(new Set(opened));

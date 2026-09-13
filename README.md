@@ -12,7 +12,7 @@
 
 ---
 
-> **Live demo:** _not deployed yet_ — `npx wrangler pages deploy web` (see [Deploy](#deploy))
+> **Live site:** not deployed yet. One command gets you there, see [Deploy](#deploy).
 
 ## What it does
 
@@ -26,26 +26,27 @@ Schedule of Classes ┤
                                                                          newly opened ──────┴──► alert + WebReg link
 ```
 
-The diff is what makes it **edge-triggered**: a section that was already open doesn't re-announce itself. V1 needed a per-user ten-minute cooldown to suppress repeats; comparing against the previous set removes the need for one.
+Detection is **edge-triggered**: each cycle computes `new - previous`, so a section that was already open produces no event. Correctness comes from the shape of the computation rather than from suppression rules layered on top of it.
 
 ## Why the data is split
 
 | Data | Where it lives | Refresh |
 |---|---|---|
-| Catalogue — titles, professors, meeting times, 4.8 MB | **Stored** as static JSON on a CDN | Rebuilt daily by CI |
-| Open/closed status — 26 KB | **Polled** through the edge proxy | Every 30 s, edge-cached |
+| Catalogue: titles, professors, meeting times, 4.8 MB | **Stored** as static JSON on a CDN | Rebuilt daily by CI |
+| Open/closed status, 26 KB | **Polled** through the edge proxy | Every 30 s, edge-cached |
 
-The page isn't re-downloading 4.8 MB every thirty seconds — it fetches a small array of index numbers and diffs it in memory. Measured: **27 ms** to parse the catalogue once, **2 ms** per poll diff across 11,444 indexes.
+The page does not re-download 4.8 MB every thirty seconds. It fetches a small array of index numbers and diffs it in memory: **27 ms** to parse the catalogue once, **2 ms** per diff across 11,444 indexes. That measurement is why this surface needs no database.
 
 ## Findings on the undocumented API
 
 Rutgers publishes no API documentation. These were established by inspection, and each one changed a design decision.
 
-- **`courses.json` ignores its own `subject` parameter.** One request returns the entire campus catalogue. V1 drove a headless Chrome across fifteen school pages, sleeping ten seconds each, to scrape a *subset* of the same data out of rendered HTML — data the page had itself fetched as JSON moments earlier. [That pipeline is gone.](legacy/v1/)
-- **Index numbers are recycled between terms.** 3,059 Spring 2025 indexes reappear in Fall 2026 attached to different courses. Stored history must be scoped per term or it corrupts at every rollover — which is exactly what V1's `last_opened_sections.csv` did, silently.
-- **Cross-listed sections open independently.** Of 970 cross-listed pairs in Fall 2026, **254 are currently split** — one index open, its twin closed. Watching one doesn't cover the other.
+- **Index numbers are recycled between terms.** 3,059 index numbers valid in one recent term are also valid in another, attached to entirely different courses. An index alone is not a stable identifier, so every stored record is keyed by `(term, campus, index)`.
+- **Cross-listed sections open independently.** Of 970 cross-listed pairs in Fall 2026, **254 are currently split**: one index open, its twin closed. Watching one does not cover the other, so the alert offers to add both.
 - **24% of sections require a special permission number** (2,902 of 12,004 in New Brunswick). An open seat there isn't registrable without departmental approval, so they're badged rather than treated as a normal opening.
-- **No CORS headers**, so a browser can't call the endpoints directly — hence the proxy. **`Cache-Control: max-age=30`** sets the floor on useful polling. An `ETag` is sent but `If-None-Match` is ignored, so conditional requests buy nothing.
+- **No CORS headers**, so a browser cannot call the endpoints directly, which is why the proxy exists. **`Cache-Control: max-age=30`** sets the floor on useful polling. An `ETag` is sent but `If-None-Match` is ignored, so conditional requests save nothing.
+- **`courses.json` ignores its own `subject` parameter**, returning the entire campus catalogue from one request.
+- **Two endpoints ignore parameters they accept.** `courses.json` takes a `subject` and returns the whole campus regardless; `openSections.json` takes a `campus` and returns every open index university wide, all 11,444 of them, whichever campus you ask for. Campus scoping therefore happens against the loaded catalogue, which is the only authoritative statement of what belongs where.
 - **Titles are aggressively abbreviated.** Expository Writing is filed as `COLLEGE WRITING`; you'll also find `MICROBIOL HLTH SCI`. Exact matching returns nothing for the names students type, so search is relevance-ranked instead.
 
 ## Search
@@ -79,24 +80,55 @@ Then open <http://localhost:8788>. The dev server serves `web/` and mirrors the 
 
 ## Deploy
 
-Static files plus two Pages Functions, so one command ships everything:
+The site is static files plus one serverless function. The function is not
+optional: the Rutgers endpoints send no CORS headers, so without a proxy the
+browser cannot fetch live status at all. Any host that runs edge functions
+works, and adapters for two are included.
+
+### Vercel
+
+```bash
+npx vercel --prod
+```
+
+`vercel.json` serves `web/` as the static root and Vercel picks up `api/open.js`
+and `api/courses.js` as edge functions automatically. Nothing else to configure.
+The Hobby tier is free and covers this comfortably.
+
+### Cloudflare Pages
 
 ```bash
 npx wrangler pages deploy web --project-name ru-snipez
 ```
 
-`web/functions/api/*` runs the proxy on the **same origin** as the page, so the browser never makes a cross-origin request and CORS stops being a concern. The standalone [`worker/`](worker/) is the alternative for hosting the frontend elsewhere. The free tier covers 100,000 requests/day, and because responses are cached 30 s at the edge, visitor count doesn't translate into upstream load.
+`web/functions/api/` runs as Pages Functions on the same origin. The free tier
+covers 100,000 function requests per day, and because responses are cached 30
+seconds at the edge, visitor count does not translate into upstream load.
+
+### A purely static host
+
+GitHub Pages and similar cannot run the proxy. To use one, deploy the
+standalone Worker in [`worker/`](worker/) separately and point the page at it:
+
+```html
+<meta name="api-base" content="https://ru-snipez-api.YOUR-SUBDOMAIN.workers.dev">
+```
+
+Search, filtering and the catalogue work without the proxy; live open and
+closed status does not.
 
 ## Layout
 
 ```
 src/rusnipez/soc/      term encoding, async API client, payload normalizer
 src/rusnipez/catalog/  catalogue builder CLI
-web/                   the demo — static frontend + Pages Functions
-worker/                standalone Cloudflare Worker (alternative to Pages Functions)
+web/                   the site: static frontend + Cloudflare Pages Functions
+lib/soc-proxy.js       shared proxy logic, web-standard Request and Response
+api/                   Vercel edge adapters over lib/soc-proxy.js
+worker/                standalone Cloudflare Worker, for static hosts
 scripts/devserver.py   local server mirroring the production /api contract
 tests/                 43 tests over the normalizer and term encoding
-legacy/v1/             the original Discord bot, archived
+legacy/v1/             the original Discord bot, archived for reference
 ```
 
 ## Development
@@ -113,20 +145,19 @@ CI runs ruff, pytest and `pip-audit` on every push. A second workflow rebuilds t
 
 ## Roadmap
 
-Built: catalogue pipeline, API client, normalizer, edge proxy, live web demo.
+Live: catalogue pipeline, API client, normalizer, edge proxy, web surface, Discord surface.
 
 Next, in order:
 
-1. **Always-on polling engine** — so alerts fire with the tab closed. Currently the browser does the polling, which means the demo only watches while it's open.
-2. **Web Push** — free, no account needed, the first real notification channel.
-3. **Persistent last-opened history** — needs the poller above plus a per-term store, for the reason in the findings section.
-4. **Cross-listing prompt** — "you're watching 10052, its twin 10053 opens separately."
-5. **Core-code watching** — *"alert me when any section satisfies my remaining HST requirement."* Inverts the product: students stop needing to know which index they want.
-6. **Discord notifier** — re-pointed at the new core, so the existing bot becomes one sink among several rather than the whole application.
+1. **Always-on polling engine** so web alerts fire with the tab closed. The browser currently does the polling, which means the web surface watches only while it is open.
+2. **Web Push** as the first background channel, free and requiring no account.
+3. **Persistent last-opened history**, which needs the poller above plus a per-term store, for the reason in the findings section.
+4. **Watching by core requirement**, so a student can ask for any open section satisfying a remaining Historical Analysis credit without knowing which course they want. This inverts the product: you stop needing to know the index in advance.
+5. **Telegram and SMS channels**, for students who do not use Discord.
 
 ## Scope
 
-RU SnipeZ **notifies**. It does not register for you, and it never asks for, stores, or transmits a NetID or password — you authenticate to WebReg through CAS yourself. That's a design constraint, not an unfinished feature.
+RU SnipeZ **notifies**. It does not register on your behalf, and it never asks for, stores or transmits a NetID or password. You authenticate to WebReg through CAS yourself, and the link only saves you from typing the index. That boundary is deliberate: automating registration would mean holding university credentials for thousands of students, which is a liability no convenience justifies.
 
 ## License
 
