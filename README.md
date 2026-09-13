@@ -28,6 +28,26 @@ Schedule of Classes ┤
 
 Detection is **edge-triggered**: each cycle computes `new - previous`, so a section that was already open produces no event. Correctness comes from the shape of the computation rather than from suppression rules layered on top of it.
 
+## Two surfaces, one engine
+
+The component that detects an opening knows nothing about how you get told. It
+emits an event and whichever surfaces are listening deliver it.
+
+**Discord.** `/snipe 10052` starts watching an index. When the seat frees up the
+alert arrives as a direct message with the register button attached.
+
+<p align="center">
+  <img src="docs/screenshots/snipe_command.png" width="49%" alt="Setting a watch with the /snipe command">
+  <img src="docs/screenshots/sample_noti.png" width="49%" alt="The alert that arrives when a seat opens">
+</p>
+
+`/check` lists everything you are watching, `/remove` drops one, `/clear` empties
+the list.
+
+**Web.** Search the catalogue, press Watch, and the same alert renders in the
+browser with the same fields and the same one click path into WebReg. Filter by
+meeting day, campus location or core requirement, and share any view as a URL.
+
 ## Why the data is split
 
 | Data | Where it lives | Refresh |
