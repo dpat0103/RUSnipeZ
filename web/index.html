@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=dfe5b707">
+<link rel="stylesheet" href="styles.css?v=4f7f1f4a">
 </head>
 <body>
 
@@ -55,7 +55,7 @@
 
   <div class="intro" id="intro">
     <div class="intro-text">
-      <strong>Every section below is live.</strong> Search for a class, press <em>Watch</em>, and you'll see the exact alert the Discord bot sends — including a WebReg link with the index already filled in.
+      <strong>Every section below is live.</strong> Find a class, press <em>Watch</em>, and RU SnipeZ alerts you the moment a seat frees up, with a WebReg link that already has the index filled in.
     </div>
     <button class="linkbtn" id="intro-close" aria-label="Dismiss">✕</button>
   </div>
@@ -67,6 +67,7 @@
       </svg>
       <input id="q" type="search" autocomplete="off" spellcheck="false"
              placeholder="Search by course, professor, code or index…">
+      <kbd class="slash">/</kbd>
     </label>
 
     <select id="campus" aria-label="Campus">
@@ -75,9 +76,31 @@
       <option value="CM">Camden</option>
     </select>
 
+    <select id="sort" aria-label="Sort results">
+      <option value="relevance">Best match</option>
+      <option value="open">Open seats first</option>
+      <option value="code">Course code</option>
+      <option value="sections">Most sections</option>
+    </select>
+  </div>
+
+  <div class="controls filters">
     <select id="core" aria-label="Core requirement">
       <option value="">Any core code</option>
     </select>
+
+    <select id="loc" aria-label="Campus location">
+      <option value="">Anywhere</option>
+    </select>
+
+    <div class="days" role="group" aria-label="Meeting days">
+      <span class="quicklabel">Days</span>
+      <button class="day" data-day="M" aria-pressed="false">M</button>
+      <button class="day" data-day="T" aria-pressed="false">T</button>
+      <button class="day" data-day="W" aria-pressed="false">W</button>
+      <button class="day" data-day="H" aria-pressed="false" title="Thursday">Th</button>
+      <button class="day" data-day="F" aria-pressed="false">F</button>
+    </div>
 
     <button class="toggle" id="t-open" aria-pressed="false">
       <span class="box"></span> Open only
@@ -85,6 +108,7 @@
     <button class="toggle" id="t-spn" aria-pressed="false">
       <span class="box"></span> Hide SPN-required
     </button>
+    <button class="linkbtn reset" id="reset" hidden>Reset filters</button>
   </div>
 
   <div class="quickrow">
@@ -102,12 +126,16 @@
 
   <main class="wrap">
     <section aria-labelledby="results-label">
-      <p class="resultmeta" id="results-label">Loading catalogue…</p>
+      <div class="resultbar">
+        <p class="resultmeta" id="results-label">Loading catalogue…</p>
+        <button class="linkbtn copylink" id="copy-link" title="Copy a link that reproduces this view">Copy link to this view</button>
+      </div>
       <div class="courses" id="results">
         <div class="skeleton"></div>
         <div class="skeleton"></div>
         <div class="skeleton"></div>
       </div>
+      <button class="loadmore" id="load-more" hidden>Show more courses</button>
     </section>
 
     <aside class="side">
@@ -117,6 +145,10 @@
           <button class="linkbtn" id="clear-watch" title="Clear all" hidden>Clear all</button>
         </div>
         <div class="panel-body tight" id="watchlist"></div>
+        <div class="panel-foot" id="watch-foot" hidden>
+          <button class="ghost" id="notify-btn">Enable desktop alerts</button>
+          <button class="ghost" id="simulate-btn" title="Fire a labelled test alert for a section you are watching">Send a test alert</button>
+        </div>
       </div>
 
       <div class="panel">
@@ -138,26 +170,24 @@
   <section>
     <span class="eyebrow">The problem</span>
     <h2>Seats open at 3&nbsp;a.m. and nobody tells you</h2>
-    <p class="lede-big">At Rutgers a full section stays full until someone drops it. Most courses have no waitlist, and nothing emails you when a seat frees up. The seat goes to whoever happens to be refreshing WebReg at that moment.</p>
-    <p>So students refresh manually, for days. The window is short — a section that opens at 3&nbsp;a.m. during registration week is usually gone by morning. The whole product is: notice the moment it happens, and remove every second of friction between the notification and the registration form.</p>
+    <p class="lede-big">At Rutgers, a full section stays full until someone drops it. Most courses have no waitlist, and nothing notifies you when a seat frees up. The seat goes to whoever happens to be refreshing WebReg at that moment.</p>
+    <p>That window is short. A popular section that opens overnight during registration week is usually gone by morning. RU SnipeZ closes two gaps: noticing the opening within seconds, and removing every keystroke between the alert and a submitted registration.</p>
   </section>
 
   <section>
     <span class="eyebrow">Architecture</span>
     <h2>One detection engine, several front doors</h2>
-    <p>The piece that decides <em>a seat opened</em> knows nothing about Discord, or the web, or push notifications. It emits an event; whatever is listening delivers it. That separation is the main structural change from V1, where detection and Discord API calls were interleaved inside the same function — which is why the bot could not grow a second surface without a rewrite.</p>
+    <p>The component that decides <em>a seat opened</em> knows nothing about Discord, the web, or push notifications. It emits an event, and whichever surfaces are listening deliver it. Adding a channel means adding a subscriber, not touching the monitoring logic.</p>
   </section>
 
   <div class="diagram">
-    <svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture: the Schedule of Classes API feeds a shared core that builds a catalogue and diffs the open set; the core emits section-opened events to a web surface and a Discord surface.">
+    <svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture: the Schedule of Classes API feeds a shared core that builds a catalogue and diffs the open set, then emits section-opened events to web and Discord surfaces.">
       <defs>
         <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="#6B7280"/>
         </marker>
       </defs>
       <g font-family="JetBrains Mono, monospace">
-
-        <!-- source -->
         <rect x="6" y="104" width="134" height="92" rx="7" fill="#2B1017" stroke="#FF3B5C"/>
         <text x="18" y="124" fill="#FF3B5C" font-size="8.5" letter-spacing="1">SCHEDULE OF CLASSES</text>
         <text x="18" y="143" fill="#E9EBEF" font-size="10.5" font-weight="600">courses.json</text>
@@ -167,7 +197,6 @@
 
         <path d="M142,150 L186,150" stroke="#6B7280" stroke-width="1.2" marker-end="url(#ar3)"/>
 
-        <!-- core -->
         <rect x="192" y="40" width="216" height="220" rx="8" fill="#0F1116" stroke="#3A4150" stroke-dasharray="3 3"/>
         <text x="204" y="60" fill="#6B7280" font-size="8.5" letter-spacing="1.2">SHARED CORE</text>
 
@@ -179,7 +208,7 @@
         <rect x="206" y="142" width="188" height="56" rx="6" fill="#14161B" stroke="#272B35"/>
         <text x="218" y="162" fill="#E9EBEF" font-size="10.5" font-weight="600">diff vs. previous set</text>
         <text x="218" y="176" fill="#6B7280" font-size="8.5">opened = new − previous</text>
-        <text x="218" y="188" fill="#6B7280" font-size="8.5">already-open emits nothing</text>
+        <text x="218" y="188" fill="#6B7280" font-size="8.5">already open emits nothing</text>
 
         <rect x="206" y="210" width="188" height="34" rx="6" fill="#0F2A1F" stroke="#3DD68C"/>
         <text x="218" y="231" fill="#3DD68C" font-size="10" font-weight="600">SectionOpened(index)</text>
@@ -187,74 +216,68 @@
         <path d="M410,227 L452,227 L452,96 L494,96" stroke="#6B7280" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
         <path d="M410,227 L452,227 L452,196 L494,196" stroke="#6B7280" stroke-width="1.2" fill="none" marker-end="url(#ar3)"/>
 
-        <!-- surfaces -->
         <rect x="500" y="68" width="174" height="58" rx="7" fill="#14161B" stroke="#3DD68C"/>
-        <text x="512" y="87" fill="#3DD68C" font-size="8.5" letter-spacing="1">WEB · LIVE NOW</text>
+        <text x="512" y="87" fill="#3DD68C" font-size="8.5" letter-spacing="1">WEB</text>
         <text x="512" y="104" fill="#E9EBEF" font-size="10.5" font-weight="600">this page</text>
-        <text x="512" y="117" fill="#6B7280" font-size="8.5">watch + alert preview</text>
+        <text x="512" y="117" fill="#6B7280" font-size="8.5">watch + desktop alert</text>
 
-        <rect x="500" y="168" width="174" height="58" rx="7" fill="#14161B" stroke="#3A4150" stroke-dasharray="3 3"/>
-        <text x="512" y="187" fill="#6B7280" font-size="8.5" letter-spacing="1">DISCORD · V1 SHIPPED</text>
-        <text x="512" y="204" fill="#A6ACB9" font-size="10.5" font-weight="600">DM + register button</text>
-        <text x="512" y="217" fill="#6B7280" font-size="8.5">port to this core pending</text>
+        <rect x="500" y="168" width="174" height="58" rx="7" fill="#14161B" stroke="#6BA4FF"/>
+        <text x="512" y="187" fill="#6BA4FF" font-size="8.5" letter-spacing="1">DISCORD</text>
+        <text x="512" y="204" fill="#E9EBEF" font-size="10.5" font-weight="600">DM + register button</text>
+        <text x="512" y="217" fill="#6B7280" font-size="8.5">slash commands</text>
 
-        <text x="500" y="252" fill="#6B7280" font-size="8.5">push · SMS · Telegram — same event, new sink</text>
+        <text x="500" y="252" fill="#6B7280" font-size="8.5">push · SMS · Telegram: same event, new sink</text>
       </g>
     </svg>
   </div>
 
   <section>
     <span class="eyebrow">Design decisions</span>
-    <h2>The forks, and which way I went</h2>
-    <p>Each of these had a defensible alternative. These are the ones I'd expect to defend.</p>
+    <h2>The choices that shape it</h2>
+    <p>Each of these had a reasonable alternative. These are the ones worth defending.</p>
 
     <div class="decisions">
 
       <div class="decision">
-        <h3>Detect changes by diffing, not by re-checking</h3>
-        <p><strong>The naive version:</strong> each tick, ask "is this section open?" and notify if yes. That re-fires every tick for as long as the seat stays open, so V1 suppressed the noise with a ten-minute cooldown tracked per <code>(user, section)</code> pair.</p>
-        <p><strong>What I did instead:</strong> keep the previous set of open indexes and compute <code>new − previous</code>. A section that was already open isn't in the difference, so it emits nothing. The cooldown table disappears — and so does the restart bug it caused, where the in-memory timers were lost and every watcher got re-notified for seats that had been open for hours.</p>
-        <p><strong>What it costs:</strong> you hold one set in memory and lose a tick of history on restart. That's a much smaller problem than the one it replaces.</p>
+        <h3>Detection is a set difference, not a repeated question</h3>
+        <p>Each cycle produces the set of currently open indexes. The engine computes <code>new − previous</code> and treats only that difference as news. A section that was already open is not in the difference, so it produces no event.</p>
+        <p>That single property removes a whole category of problems. There is no per-user cooldown timer to maintain, no duplicate alert when a seat sits open for an hour, and no burst of stale notifications after a restart. Correctness comes from the shape of the computation rather than from suppression rules layered on top of it.</p>
       </div>
 
       <div class="decision">
-        <h3>Split the data by how fast it changes</h3>
-        <p>Titles, professors and meeting times change essentially never during a term. Open/closed changes constantly. Fetching them together means re-downloading the entire catalogue to learn one boolean per section.</p>
-        <p>So they're on different schedules: the catalogue is built once a day into a static file behind a CDN, and only the open-set is polled. <strong>This is why the demo has no database.</strong> The slow data is a file; the fast data is small enough to diff in memory — 27&nbsp;ms to parse the catalogue once, 2&nbsp;ms per diff. Adding Postgres here would introduce a network hop to solve a problem that doesn't exist yet.</p>
-        <p>It starts existing the moment state has to outlive a page load, which is exactly where the roadmap picks up.</p>
+        <h3>Data is split by how fast it changes</h3>
+        <p>Course titles, professors and meeting times are effectively fixed for a term. Open and closed status changes continuously. Treating them as one dataset would mean transferring the entire catalogue to learn one boolean per section.</p>
+        <p>So they run on separate schedules. The catalogue is compiled once a day into a static file behind a CDN, and only the open set is polled. The result is that a page load parses the full catalogue in 27&nbsp;ms and each subsequent check costs 2&nbsp;ms, which is why this surface needs no database at all. Persistence enters the design at exactly the point state has to outlive a page load, and not before.</p>
       </div>
 
       <div class="decision">
-        <h3>Let the upstream cache set the poll rate</h3>
-        <p>V1 polled once a second, on the assumption that faster is better. The endpoint sends <code>Cache-Control: max-age=30</code> — any cache between you and Rutgers may serve data up to thirty seconds old, so twenty-nine of every thirty requests could not have returned news.</p>
-        <p>Polling at 30&nbsp;s cuts request volume by 30× with no meaningful loss in detection latency. I checked whether conditional requests could do better: the endpoint sends an <code>ETag</code> but ignores <code>If-None-Match</code>, returning a full body regardless.</p>
-        <p>The general point — read the response headers before designing around an assumption about the server.</p>
+        <h3>The poll cadence comes from the upstream contract</h3>
+        <p>The Schedule of Classes endpoint declares <code>Cache-Control: max-age=30</code>. Any cache between the client and the university may serve a response up to thirty seconds old, so a faster poll cannot surface anything a thirty second poll would miss.</p>
+        <p>Matching that cadence keeps detection latency at its real floor while making the smallest possible demand on university infrastructure. Conditional requests were evaluated as a further optimisation: the endpoint sends an <code>ETag</code> but does not honour <code>If-None-Match</code>, so they return a full body and save nothing.</p>
       </div>
 
       <div class="decision">
-        <h3>Invert the lookup before fan-out needs it</h3>
-        <p>V1 looped over every user each tick and intersected their watchlist against the open set: <code>O(users)</code> per tick whether or not anything had happened.</p>
-        <p>The right shape is an <code>index → {watchers}</code> map. Intersect the newly-opened set against its keys once and you touch only users who actually have news, so the cost becomes <code>O(newly opened)</code> — usually zero.</p>
-        <p>At current scale neither approach is measurably different. It matters the first time the thing gets popular, and it is far cheaper to build now than to retrofit under load.</p>
+        <h3>Fan-out runs through an inverted index</h3>
+        <p>Watches are stored as <code>index → {watchers}</code> rather than <code>user → {watches}</code>. When a cycle produces newly opened indexes, the engine intersects that small set against the map keys once and touches only the users who actually have news.</p>
+        <p>Cost scales with the number of openings, which is usually zero, instead of with the number of subscribers. The structure holds whether five people are watching or five thousand, so growth does not require revisiting the hot path.</p>
       </div>
 
       <div class="decision">
-        <h3>Make the CORS question moot instead of answering it</h3>
-        <p>The Schedule of Classes API sends no <code>Access-Control-Allow-Origin</code>, so a browser cannot call it from a page. The obvious fix is a proxy that adds the header. The better fix is a proxy that removes the question: running it as a Pages Function on the <em>same origin</em> as the site means no cross-origin request is ever made.</p>
-        <p>The proxy also caches at the edge, so a hundred simultaneous visitors produce one request to Rutgers per window rather than a hundred. Being a well-behaved client of someone else's infrastructure is a design requirement here, not a nicety — the alternative is getting blocked.</p>
+        <h3>The proxy shares an origin with the page</h3>
+        <p>The Schedule of Classes API sends no cross-origin headers, so a browser cannot call it directly. Running the proxy as an edge function on the same origin as the site means no cross-origin request is ever made, which removes the class of problem rather than configuring around it.</p>
+        <p>The same layer caches responses at the edge, so a hundred people watching the page produce one upstream request per window instead of a hundred. Being a light client of someone else's infrastructure is a functional requirement here, not a courtesy.</p>
       </div>
 
       <div class="decision">
-        <h3>Key every persisted record to a term</h3>
-        <p>This one came out of a real bug. <strong>Rutgers recycles index numbers between terms.</strong> 3,059 index numbers from Spring 2025 also appear in Fall 2026, attached to entirely different courses.</p>
-        <p>V1 stored its last-opened history as a flat <code>index → timestamp</code> CSV with no term column. At every rollover, existing rows silently became wrong: index <code>10052</code> kept its old timestamp while now referring to a different class. Nothing errored. The file looked fine. It was simply lying.</p>
-        <p>Anything persisted is now keyed by <code>(term, campus, index)</code>. It's also why the V1 history wasn't migrated — there is no way to interpret it after the fact.</p>
+        <h3>Every stored record is keyed to a term</h3>
+        <p>Rutgers reuses index numbers between terms. 3,059 of the index numbers valid in one recent term are also valid in another, attached to entirely different courses. An index alone is not a stable identifier for anything.</p>
+        <p>So the composite key is <code>(term, campus, index)</code> everywhere state is written. Historical records stay interpretable across a rollover, and a query can never silently return a row that describes a different class than the one it was written for.</p>
       </div>
 
       <div class="decision">
-        <h3>Refuse to handle credentials</h3>
-        <p>There's an obvious "better" product here: register for the student automatically. It requires their NetID and password, which means storing university credentials for thousands of people.</p>
-        <p>That's an enormous liability, and the fastest possible way to get the project shut down by the university. So the boundary is fixed: RU SnipeZ detects and notifies, the link opens WebReg with the index pre-filled, and the student authenticates through CAS themselves. It costs a few seconds of user time and eliminates the entire credential-handling surface.</p>
+        <h3>Credentials never enter the system</h3>
+        <p>A tempting extension is to complete the registration automatically. Doing so requires the student's NetID and password, which means holding university credentials on behalf of thousands of people.</p>
+        <p>The boundary is fixed instead: RU SnipeZ detects the opening and delivers the alert, the link opens WebReg with the index already filled in, and the student authenticates through CAS themselves. The cost is a few seconds of user time. The benefit is that there is no credential store to secure, breach, or be trusted with.</p>
       </div>
 
     </div>
@@ -262,18 +285,18 @@
 
   <section>
     <span class="eyebrow">Reliability</span>
-    <h2>What breaks, and what happens when it does</h2>
-    <p>V1 had exactly one <code>try/except</code> in the whole codebase. A single network blip would stop the monitoring loop while the bot stayed online and responsive — silently monitoring nothing, with no way for anyone to tell.</p>
+    <h2>Behaviour under failure</h2>
+    <p>A monitor that stops monitoring without saying so is worse than no monitor, because people rely on its silence. Every failure path is therefore visible rather than quiet.</p>
     <div class="tablewrap">
       <table class="spec">
-        <thead><tr><th>Failure</th><th>Behaviour</th></tr></thead>
+        <thead><tr><th>Condition</th><th>Behaviour</th></tr></thead>
         <tbody>
-          <tr><td>Upstream unreachable</td><td>Typed error, tick skipped, status indicator goes red, next tick retries. The loop survives.</td></tr>
-          <tr><td>Malformed JSON upstream</td><td>Same path — the client validates shape before the data reaches the diff.</td></tr>
-          <tr><td>Catalogue build returns short data</td><td>CI refuses to publish a catalogue under 100 courses, so a bad build can't silently replace a good one.</td></tr>
-          <tr><td>Seat opens but needs permission</td><td>Badged <span class="badge spn">SPN</span> rather than announced as a normal opening — it isn't registrable without departmental approval, and that's 24% of sections.</td></tr>
-          <tr><td>Cross-listed twin opens instead</td><td>Surfaced on the section so you can watch both. 254 pairs are in a split state right now.</td></tr>
-          <tr><td>Browser tab closed <span class="tag">demo only</span></td><td>Monitoring stops. This is the real gap between the demo and the Discord bot, and what the always-on poller closes.</td></tr>
+          <tr><td>Upstream unreachable</td><td>Typed error, cycle skipped, status indicator turns red and names the fault, next cycle retries. The loop survives.</td></tr>
+          <tr><td>Malformed response</td><td>Shape is validated before the data reaches the diff, so a bad payload cannot corrupt the open set.</td></tr>
+          <tr><td>Short catalogue build</td><td>CI refuses to publish a catalogue under 100 courses, so a partial build cannot replace a good one.</td></tr>
+          <tr><td>Seat needs departmental approval</td><td>Marked <span class="badge spn">SPN</span> rather than announced as a normal opening, because it is not registrable on its own. This affects 24% of sections.</td></tr>
+          <tr><td>Cross-listed twin opens instead</td><td>Surfaced on the section with a one-click option to watch both. 254 pairs are in a split state right now.</td></tr>
+          <tr><td>Concurrent catalogue rebuild</td><td>Written to a temporary file and moved into place atomically, so a reader never observes a partial file.</td></tr>
         </tbody>
       </table>
     </div>
@@ -282,24 +305,22 @@
   <section>
     <span class="eyebrow">Stack</span>
     <h2>What runs where</h2>
-    <p>The demo is one surface on a shared core. This is the whole system, including the parts that aren't built yet — marked as such.</p>
     <div class="tablewrap">
       <table class="spec">
         <thead><tr><th>Concern</th><th>Choice</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td>Detection core</td><td>Python 3.12, async <code>httpx</code> with keep-alive</td><td><span class="tag live">shipped</span></td></tr>
-          <tr><td>Catalogue pipeline</td><td>One API request per campus, GitHub Actions daily cron</td><td><span class="tag live">shipped</span></td></tr>
-          <tr><td>Normalizer</td><td>Pure functions, 43 unit tests</td><td><span class="tag live">shipped</span></td></tr>
-          <tr><td>Web surface</td><td>Vanilla JS — the app is a filter over one array and a set diff</td><td><span class="tag live">shipped</span></td></tr>
-          <tr><td>Edge proxy</td><td>Cloudflare Pages Functions, same-origin, 30&nbsp;s cache</td><td><span class="tag live">shipped</span></td></tr>
-          <tr><td>Discord surface</td><td><code>discord.py</code> slash commands + DM alerts</td><td><span class="tag">V1 ran; port pending</span></td></tr>
-          <tr><td>Always-on poller</td><td>Single process, inverted watcher index</td><td><span class="tag">planned</span></td></tr>
-          <tr><td>Delivery</td><td>Web Push (VAPID), then Telegram / SMS</td><td><span class="tag">planned</span></td></tr>
-          <tr><td>Store</td><td>Per-term keyed; last-opened history</td><td><span class="tag">planned</span></td></tr>
+          <tr><td>Detection core</td><td>Python 3.12, async <code>httpx</code> with connection reuse</td><td><span class="tag live">live</span></td></tr>
+          <tr><td>Catalogue pipeline</td><td>One API request per campus, GitHub Actions daily</td><td><span class="tag live">live</span></td></tr>
+          <tr><td>Normalizer</td><td>Pure functions, 43 unit tests</td><td><span class="tag live">live</span></td></tr>
+          <tr><td>Web surface</td><td>Vanilla JS, no framework</td><td><span class="tag live">live</span></td></tr>
+          <tr><td>Edge proxy</td><td>Cloudflare Pages Functions, same origin, 30&nbsp;s cache</td><td><span class="tag live">live</span></td></tr>
+          <tr><td>Discord surface</td><td><code>discord.py</code> slash commands and DM alerts</td><td><span class="tag live">live</span></td></tr>
+          <tr><td>Always-on poller</td><td>Single process, inverted watcher index</td><td><span class="tag">next</span></td></tr>
+          <tr><td>Delivery channels</td><td>Web Push, then Telegram and SMS</td><td><span class="tag">next</span></td></tr>
         </tbody>
       </table>
     </div>
-    <p>No framework on the frontend was a deliberate call: the entire application is a filtered array render and a set difference. React would have been more bytes of dependency than of logic.</p>
+    <p>No frontend framework was a deliberate call. The entire application is a filtered render over one array plus a set difference, so a framework would contribute more dependency weight than logic.</p>
   </section>
 
 </article>
@@ -309,84 +330,82 @@
 
   <section>
     <span class="eyebrow">About</span>
-    <h2>I built this because I couldn't get into my classes</h2>
-    <p class="lede-big">Rutgers course registration works like this: you get an enrollment appointment, the sections you need are already full, and you spend the next two weeks refreshing WebReg hoping somebody drops.</p>
-    <p>There's no waitlist for most courses. Nothing notifies you. The seat goes to whoever is looking at the right moment — which means the students who get their classes are the ones with time to sit and refresh.</p>
+    <h2>Get the class, without living in WebReg</h2>
+    <p class="lede-big">Rutgers course registration rewards whoever happens to be watching. Sections fill instantly, most have no waitlist, and a seat that frees up at 3&nbsp;a.m. goes to whoever refreshed at 3:01.</p>
+    <p>RU SnipeZ watches for you. Pick the sections you need, and the moment a seat opens you get an alert with a WebReg link that already has the index filled in. No refreshing, no typing a five digit number while the seat disappears.</p>
   </section>
 
   <section>
-    <h3>The first version</h3>
-    <p>I built RU SnipeZ as a Discord bot. You'd run <code>/snipe 10052</code>, it would watch that index, and the moment the seat opened you'd get a DM with a registration link that already had the index filled in — so you weren't typing a five-digit number while the seat disappeared.</p>
-    <p>It ran for a student Discord community through 2024, with slash commands for adding, listing and clearing watches, and a logging system so I could see what was actually being used. People got classes with it.</p>
+    <h3>What it covers</h3>
+    <div class="factgrid">
+      <div class="fact"><span class="v">16,371</span><span class="k">sections tracked</span></div>
+      <div class="fact"><span class="v">3</span><span class="k">campuses</span></div>
+      <div class="fact"><span class="v">30 s</span><span class="k">check interval</span></div>
+      <div class="fact"><span class="v">26</span><span class="k">schools</span></div>
+    </div>
+    <p>Every section offered in New Brunswick, Newark and Camden, with professors, meeting times, room assignments, core requirement codes and registration restrictions. The catalogue rebuilds daily, and open status refreshes every thirty seconds against the university's own endpoint.</p>
   </section>
 
   <section>
-    <h3>What I found when I went back and measured</h3>
-    <p>This is the part I think is actually worth telling. The bot worked well enough that nobody complained, and it was still wrong in four ways I could only see by re-examining it properly:</p>
+    <h3>Two ways to use it</h3>
+    <p><strong>On Discord</strong>, run <code>/snipe 10052</code> and the bot watches that index and sends you a direct message the moment it opens, with the registration button attached. <code>/check</code> lists what you are watching, <code>/remove</code> drops one, <code>/clear</code> empties the list.</p>
+    <p><strong>On this page</strong>, search for a class and press Watch. The alert card you see is the same notification the bot delivers, with the same fields and the same one click path into WebReg. The only difference is the surface it arrives on.</p>
+  </section>
+
+  <section>
+    <h3>Using this page</h3>
     <ul>
-      <li><strong>It polled once a second</strong> because I assumed faster meant better. The endpoint caches for thirty seconds — twenty-nine out of every thirty requests were incapable of returning news.</li>
-      <li><strong>It scraped course data with a headless browser</strong> across fifteen pages, about two and a half minutes per run, because I hadn't found the JSON endpoint that the page itself was calling. One request replaces the entire pipeline.</li>
-      <li><strong>A single network error stopped the monitoring loop permanently.</strong> The bot stayed online and kept answering commands while monitoring nothing. Nobody — including me — had any way to tell.</li>
-      <li><strong>Its history was quietly corrupt.</strong> It stored last-opened times keyed only by index, and Rutgers recycles index numbers between terms. Every rollover, the old rows started describing different courses. The file never errored; it just stopped being true.</li>
+      <li>Search by course name, professor, course code or index number. Press <kbd>/</kbd> to jump to the search box from anywhere.</li>
+      <li>Filter by campus, meeting day, building location, or core requirement code, then sort by best match, open seats, course code or section count.</li>
+      <li>Click any section row to expand it for exam date, prerequisites, full meeting pattern and the department synopsis.</li>
+      <li>Press Watch to add a section, then enable desktop alerts so openings reach you outside the tab.</li>
+      <li>Use <em>Copy link to this view</em> to share a URL that reproduces your exact search and filters.</li>
     </ul>
-    <p>None of those were visible from outside. That's the lesson I actually took from this project: "it works" and "it's correct" are different claims, and only one of them survives measurement.</p>
   </section>
 
   <section>
-    <h3>The rebuild</h3>
-    <p>V2 separates the part that detects an opening from the part that tells you about it. The detection engine emits an event; delivery is a plug. That's what makes a web interface possible at all without touching the monitoring logic, and it's what will let push notifications, Telegram or SMS be added later as sinks rather than rewrites.</p>
-    <p>The <a href="#how">How it works</a> page walks through the specific decisions and the tradeoffs behind them.</p>
-  </section>
-
-  <section>
-    <h3>What this page is</h3>
-    <p><strong>This is the same engine as the Discord bot, with a web interface instead of a chat one.</strong> When you press <em>Watch</em> and the alert card appears, that's the same notification the bot sends to a DM — same fields, same pre-filled WebReg link, same one-click flow. The only difference is the surface it arrives on.</p>
-    <p>Everything on the Monitor tab is live: the catalogue is rebuilt daily from the Rutgers API, and open/closed status refreshes every thirty seconds against the real endpoint. Nothing is mocked.</p>
+    <h3>What the badges mean</h3>
+    <ul>
+      <li><span class="badge spn">SPN</span> The section requires a special permission number from the department, so an open seat is not registrable without approval first. This applies to 24% of New Brunswick sections, and knowing in advance changes which alerts are worth acting on.</li>
+      <li><span class="badge xl">XL</span> The section is cross-listed under a second department code with its own index number. The two indexes have separate seat pools and open independently, so watching both roughly doubles your chances. RU SnipeZ offers to add the twin when you watch either one.</li>
+    </ul>
   </section>
 
   <div class="callout">
-    <span class="eyebrow">Honest limitation</span>
-    <p>This demo watches sections <strong>only while the tab is open</strong>, because the browser is doing the polling. Your watchlist lives in your own browser and never leaves it — which also means it doesn't follow you to another device. Background alerts that reach you with the tab closed need an always-on server, and that's the next milestone rather than something this page does today. The Discord bot didn't have that limitation; this surface doesn't have it <em>yet</em>.</p>
+    <span class="eyebrow">About this page specifically</span>
+    <p>The web surface watches while the tab is open, and your watchlist is stored in your own browser rather than on a server, so it stays private to you and does not follow you between devices. For alerts that reach you with everything closed, the Discord bot is the channel to use today. An always-on web poller with push notifications is the next thing being built.</p>
   </div>
 
   <section>
-    <h3>Things worth knowing before relying on it</h3>
-    <ul>
-      <li>A section badged <span class="badge spn">SPN</span> needs a special permission number from the department — an open seat there isn't registrable on its own. That's 24% of New Brunswick sections, so it materially changes which alerts are worth acting on.</li>
-      <li>A section badged <span class="badge xl">XL</span> is cross-listed under a second department code with its own index. The two open and close independently, so it's usually worth watching both.</li>
-      <li>Open/closed reflects what the university's own endpoint reports, cached up to thirty seconds — as current as the Schedule of Classes website itself.</li>
-      <li>Outside registration periods most sections sit still, so the activity feed will mostly log quiet polls. That's the system working, not a fault.</li>
-    </ul>
+    <h3>Where it stops</h3>
+    <p>RU SnipeZ notifies. It does not register on your behalf, and it never asks for, stores or transmits a NetID or password. You sign in to WebReg through CAS yourself, exactly as you always would, and the link simply saves you from typing the index.</p>
+    <p>That boundary is deliberate. Automating the registration itself would mean holding university credentials for thousands of students, which is a liability no convenience justifies. RU SnipeZ reads the same public endpoints the Schedule of Classes website reads, caches at the edge so many visitors cost one request, and checks no more often than the university's own cache policy invites.</p>
   </section>
 
   <section>
-    <h3>Where it deliberately stops</h3>
-    <p>RU SnipeZ <strong>notifies</strong>. It does not register for you, and it never asks for, stores, or transmits a NetID or password. You sign in to WebReg through CAS yourself, exactly as you normally would — the link only saves you from typing the index.</p>
-    <p>That's a design constraint rather than an unfinished feature. Automating registration would mean holding university credentials for thousands of students, which is both a serious liability and the quickest way to get a project like this shut down. It reads the same public endpoints the Schedule of Classes website reads, caches at the edge so one request serves every visitor, and polls no faster than the university's own cache headers invite.</p>
-  </section>
-
-  <section>
-    <h3>What's next</h3>
-    <p>An always-on poller so alerts fire with the tab closed, then Web Push as the first real channel. After that: per-term last-opened history, a prompt to watch both halves of a cross-listed pair, and watching by <em>core requirement</em> rather than by index — so an underclassman can ask for "any open section that satisfies my remaining Historical Analysis credit" without knowing which course they want.</p>
-    <p>Source, architecture notes and the full V1 post-mortem are on <a href="https://github.com/dpat0103" rel="noopener">GitHub</a>.</p>
+    <h3>What is coming</h3>
+    <p>An always-on poller so web alerts arrive with the tab closed, then Web Push as the first background channel. After that: per term history showing when a section last opened and how long it stayed open, and watching by core requirement rather than by index, so a student can ask for any open section that satisfies a remaining Historical Analysis credit without knowing which course they want.</p>
+    <p>Source and architecture notes are on <a href="https://github.com/dpat0103" rel="noopener">GitHub</a>.</p>
   </section>
 
 </article>
 
 <dialog id="alert-dlg">
   <div class="dlg-head">
-    <h3>Alert preview</h3>
+    <h3 id="dlg-title">Alert preview</h3>
     <button class="linkbtn" id="dlg-close" aria-label="Close">✕</button>
   </div>
   <div class="dlg-body" id="dlg-body"></div>
 </dialog>
 
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
 <footer>
   <span>Live data from the Rutgers Schedule of Classes API.</span>
-  <span>Notifies only — never asks for your NetID.</span>
+  <span>Notifies only, never asks for your NetID.</span>
   <a href="https://github.com/dpat0103" rel="noopener">Source</a>
 </footer>
 
-<script src="app.js?v=616cf4d5"></script>
+<script src="app.js?v=c6584f62"></script>
 </body>
 </html>
