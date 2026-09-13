@@ -1,8 +1,11 @@
 <div align="center">
   <img src="RU_snipeZ_logo.png" alt="RU SnipeZ" width="150" />
   <h1>RU SnipeZ</h1>
-  <p><strong>Live open-seat monitor for Rutgers course sections.</strong><br>
-  Search 16,371 sections across all three campuses, see what's open right now, and get a WebReg link with the index already filled in.</p>
+  <p><strong>Live open-seat monitor for Rutgers course registration.</strong><br>
+  Search 16,371 sections across all three campuses, watch the ones you need, and get a WebReg link with the index already filled in the second a seat opens.</p>
+  <p>
+    <a href="https://ru-snipez.vercel.app"><strong>ru-snipez.vercel.app</strong></a>
+  </p>
   <p>
     <img alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white">
     <img alt="tests" src="https://img.shields.io/badge/tests-43%20passing-3DD68C">
@@ -12,172 +15,143 @@
 
 ---
 
-> **Live site:** not deployed yet. One command gets you there, see [Deploy](#deploy).
+## The problem
 
-## What it does
+Rutgers course registration rewards whoever happens to be watching. Sections fill in the first hour of enrollment, most have no waitlist, and when a spot opens back up, it goes to whoever refreshes WebReg at exactly the right second. During registration week that means checking a five digit index number by hand, over and over, sometimes at three in the morning, for days.
 
-Rutgers publishes an unauthenticated list of currently-open section indexes, and WebReg accepts a registration index pre-filled in the URL. The entire value of this project is closing the gap between *"a seat opened"* and *"you have a registration form loaded."*
+I was doing that for my own schedule and it was obviously a problem a computer should solve. Rutgers already publishes which sections are open, as an unauthenticated JSON endpoint anyone can call. Nobody was watching it for me. So I built something that would.
 
-```
-                    ┌─ courses.json (930 KB, daily) ──► CI build ──► static catalogue (CDN)
-Schedule of Classes ┤
-                    └─ openSections.json (26 KB, live) ──► edge proxy (30 s cache) ──► diff vs. previous set
-                                                                                            │
-                                                                         newly opened ──────┴──► alert + WebReg link
-```
+## What I built
 
-Detection is **edge-triggered**: each cycle computes `new - previous`, so a section that was already open produces no event. Correctness comes from the shape of the computation rather than from suppression rules layered on top of it.
-
-## Two surfaces, one engine
-
-The component that detects an opening knows nothing about how you get told. It
-emits an event and whichever surfaces are listening deliver it.
-
-**Discord.** `/snipe 10052` starts watching an index. When the seat frees up the
-alert arrives as a direct message with the register button attached.
+**RU SnipeZ is a Discord bot that watches course sections and messages you the moment a seat opens.** You give it an index, it polls the registrar, and when your section frees up you get a direct message with a button that opens WebReg with the index already typed in. It shipped to a real Discord community and people used it to get into classes.
 
 <p align="center">
   <img src="docs/screenshots/snipe_command.png" width="49%" alt="Setting a watch with the /snipe command">
   <img src="docs/screenshots/sample_noti.png" width="49%" alt="The alert that arrives when a seat opens">
 </p>
 
-`/check` lists everything you are watching, `/remove` drops one, `/clear` empties
-the list.
+`/snipe 10052` starts watching an index. `/check` lists what you're watching, `/remove` drops one, `/clear` empties the list. That's the whole interface, because the whole point is to need it as little as possible.
 
-**Web.** Search the catalogue, press Watch, and the same alert renders in the
-browser with the same fields and the same one click path into WebReg. Filter by
-meeting day, campus location or core requirement, and share any view as a URL.
+## Why there's also a website
 
-## Why the data is split
+A Discord bot is a bad thing to put in front of someone who isn't already in your server. So I pulled the detection logic out of the bot and gave it a second front end: a live site anyone can open and try immediately, no account, no server invite.
 
-| Data | Where it lives | Refresh |
-|---|---|---|
-| Catalogue: titles, professors, meeting times, 4.8 MB | **Stored** as static JSON on a CDN | Rebuilt daily by CI |
-| Open/closed status, 26 KB | **Polled** through the edge proxy | Every 30 s, edge-cached |
+**[ru-snipez.vercel.app](https://ru-snipez.vercel.app)** is that site, and it runs on real data. Search the catalogue, press **Watch**, and the alert that renders is the same one the bot sends, with the same fields and the same link into WebReg.
 
-The page does not re-download 4.8 MB every thirty seconds. It fetches a small array of index numbers and diffs it in memory: **27 ms** to parse the catalogue once, **2 ms** per diff across 11,444 indexes. That measurement is why this surface needs no database.
+<p align="center">
+  <img src="docs/screenshots/site-monitor.png" width="100%" alt="The live monitor, searching real Fall 2026 sections">
+</p>
 
-## Findings on the undocumented API
+<p align="center">
+  <img src="docs/screenshots/site-alert.png" width="49%" alt="The alert card for a section that just opened">
+  <img src="docs/screenshots/site-detail.png" width="49%" alt="A section expanded for exam date, prerequisites and meeting location">
+</p>
 
-Rutgers publishes no API documentation. These were established by inspection, and each one changed a design decision.
+Filter by meeting day, campus location or core requirement code, sort by open seats or best match, and share any search as a URL. Click a section to expand it into exam date, prerequisites, the full meeting pattern and a copyable index.
 
-- **Index numbers are recycled between terms.** 3,059 index numbers valid in one recent term are also valid in another, attached to entirely different courses. An index alone is not a stable identifier, so every stored record is keyed by `(term, campus, index)`.
-- **Cross-listed sections open independently.** Of 970 cross-listed pairs in Fall 2026, **254 are currently split**: one index open, its twin closed. Watching one does not cover the other, so the alert offers to add both.
-- **24% of sections require a special permission number** (2,902 of 12,004 in New Brunswick). An open seat there isn't registrable without departmental approval, so they're badged rather than treated as a normal opening.
-- **No CORS headers**, so a browser cannot call the endpoints directly, which is why the proxy exists. **`Cache-Control: max-age=30`** sets the floor on useful polling. An `ETag` is sent but `If-None-Match` is ignored, so conditional requests save nothing.
-- **`courses.json` ignores its own `subject` parameter**, returning the entire campus catalogue from one request.
-- **Two endpoints ignore parameters they accept.** `courses.json` takes a `subject` and returns the whole campus regardless; `openSections.json` takes a `campus` and returns every open index university wide, all 11,444 of them, whichever campus you ask for. Campus scoping therefore happens against the loaded catalogue, which is the only authoritative statement of what belongs where.
-- **Titles are aggressively abbreviated.** Expository Writing is filed as `COLLEGE WRITING`; you'll also find `MICROBIOL HLTH SCI`. Exact matching returns nothing for the names students type, so search is relevance-ranked instead.
+<p align="center">
+  <img src="docs/screenshots/site-about.png" width="100%" alt="The About page explaining what the site is">
+</p>
 
-## Search
+## How the detection actually works
 
-Tokens are scored independently across index, code, title, instructor and subject; abbreviations are expanded into the searchable text; stopwords are dropped; ties break toward courses offering more sections.
+The endpoint Rutgers exposes, `openSections.json`, returns a flat array of every currently open index. The naive approach is to check that array on a timer and fire a notification whenever your section appears in it, which means firing again on the next check, and the one after that, for as long as the seat stays open. V1 solved that with a ten minute cooldown per user, tracked in memory, which meant a bot restart during registration week could re-notify everyone whose sections happened to be open at that moment.
 
-| Query | Top result |
+The actual fix was to stop asking a yes or no question and start computing a difference instead. Every cycle keeps the previous open set, subtracts it from the new one, and only what's left over is news:
+
+```
+                    ┌─ courses.json  (daily)  ──► catalogue build ──► static file on a CDN
+Schedule of Classes ┤
+                    └─ openSections.json (30s) ──► edge proxy ──► new − previous = what actually changed
+                                                                         │
+                                                          only this ─────┴──► alert + pre-filled WebReg link
+```
+
+A section that was already open is not in that difference, so it produces no event and needs no cooldown to suppress. The correctness comes from the shape of the computation, not from a rule bolted on to patch a symptom.
+
+The 30 second interval isn't arbitrary either. Rutgers' own response declares `Cache-Control: max-age=30`, meaning any cache between here and the registrar might already be serving something up to 30 seconds old. Polling faster than that can't surface anything sooner, it just makes more requests that cannot possibly contain news. Matching the interval to what the server actually promises keeps detection at its real floor.
+
+## What building this actually surfaced
+
+Rutgers doesn't publish documentation for these endpoints. Everything below came from reading real responses, and each one changed something in the design.
+
+**Two endpoints ignore the parameters they accept.** `courses.json` takes a `subject` filter and returns the entire campus catalogue regardless, which is good news since it means the whole catalogue is one request instead of one per department. `openSections.json` takes a `campus` filter and does the same thing in reverse: it returns every open section university-wide no matter which campus you ask for. That one cost real correctness until I caught it, because the demo's headline "sections open" counter was reading 11,444 on the Camden page, which is New Brunswick's number, not Camden's. Fixed by intersecting the response against the catalogue actually loaded for that campus, since that's the only list that knows what belongs where.
+
+**Index numbers get reused across terms.** 3,059 index numbers valid in one recent term are also valid in a different term entirely, attached to unrelated courses. An index by itself is not a stable identifier for anything you plan to remember past the current semester, so every stored record here is keyed by term and campus, not by index alone.
+
+**Cross-listed sections have separate seat pools.** A class taught once but listed under two departments gets two index numbers, and they open and close independently. Right now 254 of the 970 cross-listed pairs in the Fall catalogue are in a split state, one side open and the other closed. Watching only one side misses half the chance, so the alert offers to add the other index the moment you watch either one.
+
+**A quarter of sections aren't actually registrable when they open.** 2,902 of 12,004 New Brunswick sections carry a special permission requirement, meaning an open seat still needs department sign-off before you can add it. Those get flagged distinctly rather than announced the same way as a normal opening, because treating them identically would be actively misleading.
+
+**Course titles are written in a shorthand nobody types.** Expository Writing exists in the catalogue as `COLLEGE WRITING`. Chemistry courses show up as `ADV ORGANIC CHEM I`. A search box that only does exact substring matching returns nothing for the name a student actually knows, so search here scores tokens independently across title, code, instructor and subject, expands common abbreviations before matching, and ranks by relevance instead of requiring every word to hit.
+
+| Someone searches for | And actually finds |
 |---|---|
-| `expository writing` | `01:355:101` COLLEGE WRITING (109 sections) |
+| `expository writing` | `01:355:101` COLLEGE WRITING |
 | `microbiology health science` | `01:119:131` MICROBIOL HLTH SCI |
-| `intro to computer science` | `01:198:111` INTRO COMPUTER SCI (63 sections) |
+| `intro to computer science` | `01:198:111` INTRO COMPUTER SCI |
 | `10052` | `01:013:120` LITERARY EGYPT |
 
-Dropping stopwords mattered more than it looks: before that, `intro to computer science` ranked *Introduction to Data Science* first, purely on the word "to".
+## Where the product stops on purpose
 
-## Run it locally
+The obvious next feature is automatic registration: skip the alert, skip the click, just enroll the student the second the seat opens. That requires holding a Rutgers NetID and password for every user, which turns a small utility into custody of thousands of university logins. That's a liability no convenience justifies, and it's also very likely the fastest way to get a project like this shut down by the university it depends on.
 
-```bash
-pip install -e ".[dev]"
-```
+So the boundary is fixed: RU SnipeZ detects the opening and delivers the alert with the index already filled in. The student clicks through and signs in to WebReg through CAS themselves, exactly as they always would. It costs a few seconds. It also means there is no credential store here to secure, to breach, or to be trusted with in the first place.
 
-```bash
-python -m rusnipez.catalog.build --term 92026 --campus NB
-```
+## How it's built
 
-```bash
-python scripts/devserver.py
-```
-
-Then open <http://localhost:8788>. The dev server serves `web/` and mirrors the production `/api` routes, so no Cloudflare account is needed to develop against live Rutgers data.
-
-## Deploy
-
-The site is static files plus one serverless function. The function is not
-optional: the Rutgers endpoints send no CORS headers, so without a proxy the
-browser cannot fetch live status at all. Any host that runs edge functions
-works, and adapters for two are included.
-
-### Vercel
-
-```bash
-npx vercel --prod
-```
-
-`vercel.json` serves `web/` as the static root and Vercel picks up `api/open.js`
-and `api/courses.js` as edge functions automatically. Nothing else to configure.
-The Hobby tier is free and covers this comfortably.
-
-### Cloudflare Pages
-
-```bash
-npx wrangler pages deploy web --project-name ru-snipez
-```
-
-`web/functions/api/` runs as Pages Functions on the same origin. The free tier
-covers 100,000 function requests per day, and because responses are cached 30
-seconds at the edge, visitor count does not translate into upstream load.
-
-### A purely static host
-
-GitHub Pages and similar cannot run the proxy. To use one, deploy the
-standalone Worker in [`worker/`](worker/) separately and point the page at it:
-
-```html
-<meta name="api-base" content="https://ru-snipez-api.YOUR-SUBDOMAIN.workers.dev">
-```
-
-Search, filtering and the catalogue work without the proxy; live open and
-closed status does not.
-
-## Layout
+One detection core, two delivery surfaces:
 
 ```
 src/rusnipez/soc/      term encoding, async API client, payload normalizer
-src/rusnipez/catalog/  catalogue builder CLI
-web/                   the site: static frontend + Cloudflare Pages Functions
-lib/soc-proxy.js       shared proxy logic, web-standard Request and Response
-api/                   Vercel edge adapters over lib/soc-proxy.js
-worker/                standalone Cloudflare Worker, for static hosts
-scripts/devserver.py   local server mirroring the production /api contract
-tests/                 43 tests over the normalizer and term encoding
-legacy/v1/             the original Discord bot, archived for reference
+src/rusnipez/catalog/  catalogue builder, run daily by CI across all three campuses
+web/                   the site itself: static HTML/CSS/JS, no framework, no build step
+lib/soc-proxy.js       the proxy logic, written once against the standard Request/Response
+api/                   Vercel edge functions wrapping lib/soc-proxy.js
+worker/                the same proxy as a standalone Cloudflare Worker, for other hosts
+scripts/devserver.py   a local server that mirrors production so development needs no cloud account
+tests/                 43 tests over the normalizer and the term encoding
+legacy/v1/             the original bot, kept for reference
 ```
 
-## Development
+The frontend has no framework because it doesn't need one: the entire application is a filtered render over one in-memory array and a set difference computed every 30 seconds. Course data (titles, professors, meeting times, roughly 4.8 MB) barely changes during a term, so it's built once a day and served as a static file from a CDN. Only the open/closed status is actually live, and that response is small enough to diff in memory in about 2 milliseconds. Nothing here needed a database, because nothing here needed to remember anything past the current page load, yet.
+
+The proxy exists because Rutgers sends no CORS headers on either endpoint, so a browser can't call them directly. It's one function, written against the web platform's own `Request` and `Response` types rather than a specific host's SDK, which is why the exact same code runs as a Vercel edge function and as a Cloudflare Worker without being written twice.
+
+## Try it yourself
+
+```bash
+git clone https://github.com/dpat0103/RUSnipeZ.git
+cd RUSnipeZ
+pip install -e ".[dev]"
+python -m rusnipez.catalog.build --term 92026 --campus NB
+python scripts/devserver.py
+```
+
+Then open `http://localhost:8788`. The dev server mirrors the production `/api` routes locally, so you're developing against live Rutgers data without needing a Vercel or Cloudflare account.
 
 ```bash
 pytest -q
-```
-
-```bash
 ruff check src tests && ruff format --check src tests
 ```
 
-CI runs ruff, pytest and `pip-audit` on every push. A second workflow rebuilds the catalogue daily across all three campuses and refuses to publish a truncated one.
+CI runs the same lint, test and dependency audit on every push, and a second scheduled workflow rebuilds the catalogue daily and refuses to publish one that looks truncated.
 
-## Roadmap
+## Deploying your own copy
 
-Live: catalogue pipeline, API client, normalizer, edge proxy, web surface, Discord surface.
+The site is static files plus one small serverless function, and the function is the part that can't be skipped: without a proxy in front of the Rutgers endpoints, a browser gets blocked by CORS before it ever sees live data.
 
-Next, in order:
+**Vercel:** run `npx vercel --prod`. `vercel.json` points it at `web/` and it picks up `api/open.js` and `api/courses.js` as edge functions with no extra configuration. This is what's actually running at [ru-snipez.vercel.app](https://ru-snipez.vercel.app).
 
-1. **Always-on polling engine** so web alerts fire with the tab closed. The browser currently does the polling, which means the web surface watches only while it is open.
-2. **Web Push** as the first background channel, free and requiring no account.
-3. **Persistent last-opened history**, which needs the poller above plus a per-term store, for the reason in the findings section.
-4. **Watching by core requirement**, so a student can ask for any open section satisfying a remaining Historical Analysis credit without knowing which course they want. This inverts the product: you stop needing to know the index in advance.
-5. **Telegram and SMS channels**, for students who do not use Discord.
+**Cloudflare Pages:** run `npx wrangler pages deploy web --project-name ru-snipez`. `web/functions/api/` runs as Pages Functions on the same origin as the site.
 
-## Scope
+**A purely static host,** since GitHub Pages and similar can't run either of the above, needs the proxy deployed [`worker/`](worker/) on its own and point the page at it with `<meta name="api-base" content="https://your-worker.workers.dev">`. Search and the catalogue still work without the proxy; live open and closed status does not.
 
-RU SnipeZ **notifies**. It does not register on your behalf, and it never asks for, stores or transmits a NetID or password. You authenticate to WebReg through CAS yourself, and the link only saves you from typing the index. That boundary is deliberate: automating registration would mean holding university credentials for thousands of students, which is a liability no convenience justifies.
+## What's next
+
+The site currently detects openings only while a tab is open, because the browser itself is doing the 30 second polling. The Discord bot doesn't share that limitation, since it runs as a standing process. Closing that gap for the web surface means moving detection to an always-on process and adding **Web Push** as the first channel that reaches you with nothing open at all.
+
+After that: a proper per-term history of when sections last opened, a nudge to watch both sides of a cross-listed pair automatically, and letting a student watch a **core requirement** instead of an index, so they can ask for any open section that satisfies their remaining Historical Analysis credit without knowing in advance which course they want.
 
 ## License
 
