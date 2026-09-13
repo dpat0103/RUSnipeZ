@@ -731,3 +731,164 @@ table.spec td:first-child { color: var(--text); font-family: var(--mono); font-s
   .tabs { width: 100%; justify-content: space-between; }
   .tabs a { flex: 1; text-align: center; padding: 7px 6px; font-size: 12.5px; }
 }
+
+/* ---------------- intro strip ---------------- */
+.intro {
+  max-width: 1320px;
+  margin: 16px auto 0;
+  padding: 11px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--scarlet);
+  border-radius: 9px;
+}
+.intro-text { flex: 1; font-size: 13.5px; color: var(--text-2); line-height: 1.5; }
+.intro-text strong { color: var(--text); }
+.intro-text em { color: var(--scarlet); font-style: normal; font-weight: 600; }
+
+/* ---------------- quick row ---------------- */
+.quickrow {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 4px 20px 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.quicklabel {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.quick {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  transition: background .12s, color .12s, border-color .12s;
+}
+.quick:hover { background: var(--surface-3); color: var(--text); border-color: var(--text-3); }
+
+.legend {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.legend .status, .legend .badge { margin-left: 5px; }
+.legend .status:first-child { margin-left: 0; }
+
+/* ---------------- watchlist items ---------------- */
+.wl-item {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+}
+.wl-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.wl-actions { display: flex; align-items: center; gap: 2px; }
+.wl-remove {
+  background: none;
+  border: 0;
+  color: var(--text-3);
+  font-size: 16px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 5px;
+}
+.wl-remove:hover { color: var(--scarlet); background: var(--scarlet-dim); }
+
+#clear-watch {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 5px;
+}
+#clear-watch:hover { background: var(--scarlet-dim); }
+
+/* ---------------- decision blocks ---------------- */
+.decisions { display: flex; flex-direction: column; gap: 2px; }
+.decision {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.decision h3 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 16.5px;
+  letter-spacing: -.012em;
+  margin: 0;
+  color: var(--text);
+}
+.decision p { font-size: 14px; line-height: 1.62; margin: 0; }
+.decision p strong { color: var(--text); }
+
+/* ---------------- status tags ---------------- */
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.tag.live { background: var(--open-dim); color: var(--open); }
+
+table.spec .badge { margin: 0 2px; }
+
+@media (max-width: 720px) {
+  .legend { margin-left: 0; width: 100%; }
+  .intro { margin-left: 16px; margin-right: 16px; }
+}
+
+/* ---------------- cross-list prompt in the alert ---------------- */
+.twin-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  background: var(--xlist-dim);
+  border: 1px solid var(--xlist);
+  border-radius: 8px;
+  color: var(--xlist);
+  font-size: 13px;
+  font-weight: 600;
+}
+.twin-btn:hover { background: color-mix(in srgb, var(--xlist) 22%, transparent); }
+.twin-done {
+  margin: 8px 0 0;
+  padding: 9px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--open);
+  background: var(--open-dim);
+  border-radius: 8px;
+}

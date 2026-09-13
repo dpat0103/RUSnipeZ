@@ -61,7 +61,11 @@ const el = {
   tSpn: $("t-spn"),
   dlg: $("alert-dlg"),
   dlgBody: $("dlg-body"),
+  intro: $("intro"),
+  introClose: $("intro-close"),
 };
+
+const INTRO_KEY = "rusnipez.intro.dismissed.v1";
 
 /* ------------------------------- helpers ------------------------------- */
 
@@ -321,8 +325,12 @@ function renderResults(justOpened = new Set()) {
   const shown = matches.slice(0, MAX_COURSES_RENDERED);
   const sectionCount = matches.reduce((n, m) => n + m.sections.length, 0);
 
+  const openCount = matches.reduce(
+    (n, m) => n + m.sections.filter((s) => state.open.has(s.index)).length,
+    0
+  );
   el.resultsLabel.textContent = matches.length
-    ? `${num(matches.length)} courses · ${num(sectionCount)} sections` +
+    ? `${num(matches.length)} courses · ${num(sectionCount)} sections · ${num(openCount)} open now` +
       (matches.length > shown.length ? ` — showing first ${shown.length}` : "")
     : "No sections match those filters.";
 
@@ -415,24 +423,32 @@ function renderWatchlist() {
 
   if (state.watch.size === 0) {
     el.watchlist.innerHTML =
-      '<div class="panel-body"><p class="empty">Nothing watched yet. Pick a section and press <strong>Watch</strong> — the alert preview shows exactly what you’d receive.</p></div>';
+      '<div class="panel-body"><p class="empty">Nothing watched yet. Find a section and press <strong>Watch</strong> — you’ll see the exact alert the Discord bot sends.</p></div>';
     return;
   }
 
-  el.watchlist.innerHTML = [...state.watch]
-    .map((index) => {
-      const entry = state.sectionsByIndex.get(index);
-      if (!entry) return "";
+  // Open sections first: if something you are watching has a seat right now,
+  // it should not be below three closed ones.
+  const entries = [...state.watch]
+    .map((index) => ({ index, entry: state.sectionsByIndex.get(index) }))
+    .filter((row) => row.entry)
+    .sort((a, b) => Number(state.open.has(b.index)) - Number(state.open.has(a.index)));
+
+  el.watchlist.innerHTML = entries
+    .map(({ index, entry }) => {
       const { course, section } = entry;
       const isOpen = state.open.has(index);
+      const meets = section.meets[0];
+      const when = meets && meets.start ? `${meets.days} ${clock(meets.start)}` : "Async";
       return `<div class="wl-item">
         <span>
-          <span class="wl-title">${esc(course.title)}</span><br>
-          <span class="wl-sub">${esc(index)} · sec ${esc(section.number)}</span>
+          <span class="wl-title">${esc(course.title)}</span>
+          <span class="wl-meta">${esc(index)} · sec ${esc(section.number)} · ${esc(when)}</span>
         </span>
-        <span>
-          <span class="status ${isOpen ? "open" : "closed"}">${isOpen ? "OPEN" : "CLOSED"}</span>
+        <span class="status ${isOpen ? "open" : "closed"}">${isOpen ? "OPEN" : "CLOSED"}</span>
+        <span class="wl-actions">
           <button class="linkbtn" data-preview="${esc(index)}" title="Preview alert">◉</button>
+          <button class="wl-remove" data-unwatch="${esc(index)}" title="Stop watching ${esc(index)}" aria-label="Stop watching ${esc(index)}">×</button>
         </span>
       </div>`;
     })
@@ -446,8 +462,12 @@ function showAlert(index, { auto = false } = {}) {
   if (!entry) return;
   const { course, section } = entry;
 
+  // The twin has its own seat pool and opens independently, so offer to watch
+  // it rather than just mentioning it exists.
+  const twins = section.crossListed.filter((i) => state.sectionsByIndex.has(i));
+  const unwatched = twins.filter((i) => !state.watch.has(i));
   const crossListed = section.crossListed.length
-    ? `<dt>Also as</dt><dd><code>${esc(section.crossListed.join(", "))}</code> — independent seat pool, worth watching too</dd>`
+    ? `<dt>Also as</dt><dd><code>${esc(section.crossListed.join(", "))}</code> — same class, separate seat pool</dd>`
     : "";
   const spn = section.spn
     ? `<dt>Heads up</dt><dd>Needs a special permission number from the department</dd>`
@@ -469,6 +489,13 @@ function showAlert(index, { auto = false } = {}) {
     <a class="reg-btn" href="${WEBREG}${encodeURIComponent(section.index)}" target="_blank" rel="noopener">
       Register on WebReg →
     </a>
+    ${
+      unwatched.length
+        ? `<button class="twin-btn" data-watch-twins="${esc(unwatched.join(","))}">
+             + Also watch ${unwatched.length === 1 ? `index ${esc(unwatched[0])}` : `${unwatched.length} cross-listed indexes`}
+           </button>`
+        : ""
+    }
     <p class="dlg-note">${auto ? "This fired automatically because the section just opened. " : ""}The button opens WebReg with the index already filled in: <code>${esc(WEBREG)}${esc(section.index)}</code>. You still sign in through CAS yourself — RU SnipeZ never handles your NetID.</p>
   `;
   if (!el.dlg.open) el.dlg.showModal();
@@ -564,8 +591,51 @@ document.addEventListener("click", (event) => {
     return;
   }
 
+  const unwatchBtn = event.target.closest("[data-unwatch]");
+  if (unwatchBtn) {
+    state.watch.delete(unwatchBtn.dataset.unwatch);
+    saveWatch();
+    renderWatchlist();
+    renderResults();
+    return;
+  }
+
+  const twinBtn = event.target.closest("[data-watch-twins]");
+  if (twinBtn) {
+    for (const index of twinBtn.dataset.watchTwins.split(",")) state.watch.add(index);
+    saveWatch();
+    renderWatchlist();
+    renderResults();
+    twinBtn.replaceWith(
+      Object.assign(document.createElement("p"), {
+        className: "twin-done",
+        textContent: "Added to your watchlist.",
+      })
+    );
+    return;
+  }
+
+  const quickBtn = event.target.closest(".quick");
+  if (quickBtn) {
+    el.q.value = quickBtn.dataset.q;
+    state.filters.q = quickBtn.dataset.q;
+    renderResults();
+    el.q.focus();
+    return;
+  }
+
   const previewBtn = event.target.closest("[data-preview]");
   if (previewBtn) showAlert(previewBtn.dataset.preview);
+});
+
+// The intro strip is for first-time visitors; once dismissed it stays gone.
+el.introClose.addEventListener("click", () => {
+  el.intro.hidden = true;
+  try {
+    localStorage.setItem(INTRO_KEY, "1");
+  } catch {
+    /* non-fatal */
+  }
 });
 
 el.clearWatch.addEventListener("click", () => {
@@ -614,6 +684,11 @@ window.addEventListener("hashchange", () => showView(location.hash.slice(1)));
 
 async function main() {
   showView(location.hash.slice(1));
+  try {
+    if (localStorage.getItem(INTRO_KEY)) el.intro.hidden = true;
+  } catch {
+    /* storage blocked — just show the intro */
+  }
   loadWatch();
   renderWatchlist();
   renderFeed();
