@@ -48,6 +48,7 @@ def fetch_upstream(file: str, term: str, campus: str) -> bytes:
 
 class Handler(SimpleHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+    extensions_map = {**SimpleHTTPRequestHandler.extensions_map, ".js": "text/javascript"}
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, directory=str(WEB_ROOT), **kwargs)
