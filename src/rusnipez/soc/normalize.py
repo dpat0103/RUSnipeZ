@@ -106,9 +106,7 @@ def normalize_section(raw: dict[str, Any]) -> dict[str, Any] | None:
         }
     )
 
-    instructors = [
-        name for i in raw.get("instructors") or [] if (name := _clean(i.get("name")))
-    ]
+    instructors = [name for i in raw.get("instructors") or [] if (name := _clean(i.get("name")))]
 
     return {
         "index": index,
@@ -159,10 +157,6 @@ def normalize_course(raw: dict[str, Any]) -> dict[str, Any] | None:
 
 def normalize_catalog(raw_courses: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Normalize the full catalogue, dropping courses with no usable sections."""
-    courses = [
-        course
-        for raw in raw_courses
-        if (course := normalize_course(raw)) is not None
-    ]
+    courses = [course for raw in raw_courses if (course := normalize_course(raw)) is not None]
     courses.sort(key=lambda c: c["code"])
     return courses

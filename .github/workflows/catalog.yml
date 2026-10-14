@@ -24,18 +24,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv python install 3.12
-      - run: uv pip install --system -e .
+      - run: uv venv --python 3.12
+      - run: uv pip install -e .
 
       - name: Build catalogue
         run: |
-          python -m rusnipez.catalog.build \
+          .venv/bin/python -m rusnipez.catalog.build \
             --term "${{ inputs.term || '92026' }}" \
             --campus "${{ matrix.campus }}" \
             --out data
 
       - name: Sanity check the output
         run: |
-          python - <<'PY'
+          .venv/bin/python - <<'PY'
           import json, pathlib, sys
           for path in pathlib.Path("data").glob("catalog-*.json"):
               data = json.loads(path.read_text(encoding="utf-8"))

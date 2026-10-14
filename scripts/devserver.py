@@ -12,10 +12,10 @@ from __future__ import annotations
 import argparse
 import gzip
 import json
+import os
 import re
 import urllib.error
 import urllib.request
-from functools import lru_cache
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from time import monotonic
@@ -78,6 +78,22 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if parsed.path in {"/api/history", "/api/snapshot"}:
+            query = parse_qs(parsed.query)
+            term = (query.get("term") or [""])[0]
+            campus = (query.get("campus") or ["NB"])[0].upper()
+            if not TERM_PATTERN.fullmatch(term) or campus not in CAMPUSES:
+                return self._problem(400, "Invalid term or campus.")
+            base = os.environ.get("HISTORY_API_BASE", "").rstrip("/")
+            if not base:
+                return self._problem(503, "Shared history is not configured.")
+            try:
+                url = f"{base}{parsed.path}?term={term}&campus={campus}"
+                with urllib.request.urlopen(url, timeout=10) as response:
+                    body = response.read()
+                return self._send(200, body, "application/json; charset=utf-8", "no-store")
+            except (urllib.error.URLError, TimeoutError):
+                return self._problem(502, "Shared history is temporarily unavailable.")
         file = ROUTES.get(parsed.path)
         if file is None:
             return super().do_GET()
@@ -104,9 +120,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self._problem(502, f"Upstream unreachable: {e}")
 
         _cache[key] = (monotonic(), body)
-        self._send(
-            200, body, "application/json; charset=utf-8", f"public, max-age={CACHE_SECONDS}"
-        )
+        self._send(200, body, "application/json; charset=utf-8", f"public, max-age={CACHE_SECONDS}")
 
 
 def main() -> None:

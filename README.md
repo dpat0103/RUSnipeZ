@@ -2,7 +2,7 @@
   <img src="RU_snipeZ_logo.png" alt="RU SnipeZ" width="150" />
   <h1>RU SnipeZ</h1>
   <p><strong>Live open-seat monitor for Rutgers course registration.</strong><br>
-  Search 16,371 sections across all three campuses, watch the ones you need, and get a WebReg link with the index already filled in the second a seat opens.</p>
+  Search 16,371 sections across all three campuses, see when a section last opened, watch the ones you need, and get a WebReg link with the index already filled in the second a seat opens.</p>
   <p>
     <a href="https://ru-snipez.vercel.app"><strong>ru-snipez.vercel.app</strong></a>
   </p>
@@ -54,6 +54,14 @@ Filter by meeting day, campus location or core requirement code, sort by open se
 </p>
 
 ## How the detection actually works
+
+### Last-opened history
+
+Section rows, expanded details and the watchlist show the last **observed closed-to-open transition**, in Eastern time. Expanded details also show the number of recorded openings, last closure, and average observed time open. A SQLite-backed Cloudflare Durable Object collects the university-wide open set approximately every 30 seconds, independently of visitors, and records openings, closures, and collection gaps by term and index. The campus catalog determines which indexes appear on each campus view. A minute-level cron starts the collector after deployment and restores its alarm if needed.
+
+The collector publishes a compact status/history snapshot to private Cloudflare R2 storage. Vercel's CDN serves it through `/api/snapshot`; visitors never wait on Rutgers or query the historical database. The browser requests the catalog and snapshot together and renders courses as soon as the catalog arrives. No purchased domain is needed.
+
+History starts at the collector's first successful check; it cannot reconstruct past openings from Rutgers. The first snapshot establishes a baseline without inventing opening times for seats already open. Failed or malformed responses leave the last good snapshot intact; after a gap longer than 90 seconds, the collector establishes a fresh baseline. Timestamps are observations between checks, not exact registration times. Missing records do not mean a section never opened. See [history setup](docs/seat-history.md) to enable shared collection on your deployment.
 
 The endpoint Rutgers exposes, `openSections.json`, returns a flat array of every currently open index. The naive approach is to check that array on a timer and fire a notification whenever your section appears in it, which means firing again on the next check, and the one after that, for as long as the seat stays open. V1 solved that with a ten minute cooldown per user, tracked in memory, which meant a bot restart during registration week could re-notify everyone whose sections happened to be open at that moment.
 
@@ -114,7 +122,7 @@ tests/                 43 tests over the normalizer and the term encoding
 legacy/v1/             the original bot, kept for reference
 ```
 
-The frontend has no framework because it doesn't need one: the entire application is a filtered render over one in-memory array and a set difference computed every 30 seconds. Course data (titles, professors, meeting times, roughly 4.8 MB) barely changes during a term, so it's built once a day and served as a static file from a CDN. Only the open/closed status is actually live, and that response is small enough to diff in memory in about 2 milliseconds. Nothing here needed a database, because nothing here needed to remember anything past the current page load, yet.
+The frontend has no framework: the application renders a filtered catalog and checks prepared snapshots every 30 seconds. Course data is built daily and served as static files from a CDN. The background Worker owns the SQLite event log and publishes R2 snapshots; thin Vercel and Pages adapters expose those stored snapshots on the site's own origin. SQL writes and live Rutgers requests stay out of the page-loading path.
 
 The proxy exists because Rutgers sends no CORS headers on either endpoint, so a browser can't call them directly. It's one function, written against the web platform's own `Request` and `Response` types rather than a specific host's SDK, which is why the exact same code runs as a Vercel edge function and as a Cloudflare Worker without being written twice.
 
@@ -124,11 +132,11 @@ The proxy exists because Rutgers sends no CORS headers on either endpoint, so a 
 git clone https://github.com/dpat0103/RUSnipeZ.git
 cd RUSnipeZ
 pip install -e ".[dev]"
-python -m rusnipez.catalog.build --term 92026 --campus NB
+python -m rusnipez.catalog.build --term 92026 --campus NB --out web/data
 python scripts/devserver.py
 ```
 
-Then open `http://localhost:8788`. The dev server mirrors the production `/api` routes locally, so you're developing against live Rutgers data without needing a Vercel or Cloudflare account.
+Then open `http://localhost:8788`. To enable live status/history, also run the local Worker and point `HISTORY_API_BASE` at it; [the local setup instructions](docs/seat-history.md#local-development) cover both terminals and the cron trigger. Wrangler emulates SQLite and R2 without a Vercel or Cloudflare account. The catalog remains searchable when snapshots are unavailable.
 
 ```bash
 pytest -q
@@ -151,7 +159,7 @@ The site is static files plus one small serverless function, and the function is
 
 The site currently detects openings only while a tab is open, because the browser itself is doing the 30 second polling. The Discord bot doesn't share that limitation, since it runs as a standing process. Closing that gap for the web surface means moving detection to an always-on process and adding **Web Push** as the first channel that reaches you with nothing open at all.
 
-After that: a proper per-term history of when sections last opened, a nudge to watch both sides of a cross-listed pair automatically, and letting a student watch a **core requirement** instead of an index, so they can ask for any open section that satisfies their remaining Historical Analysis credit without knowing in advance which course they want.
+After that: a detailed opening timeline, a nudge to watch both sides of a cross-listed pair automatically, and letting a student watch a **core requirement** instead of an index, so they can ask for any open section that satisfies their remaining Historical Analysis credit without knowing in advance which course they want.
 
 ## License
 

@@ -10,6 +10,8 @@ seconds at the edge, matching upstream's own `max-age`.
 |---|---|---|
 | `/api/open?term=92026&campus=NB` | `openSections.json` | ~26 KB array of open index strings |
 | `/api/courses?term=92026&campus=NB` | `courses.json` | ~930 KB full catalogue |
+| `/api/history?term=92026&campus=NB` | Prepared R2 object | Compatibility alias of `/api/snapshot` |
+| `/api/snapshot?term=92026&campus=NB` | Prepared R2 object | Current open set and historical summaries; no Rutgers request or SQL query |
 
 `term` is a 5-digit WebReg code (season digit first): `0` winter, `1` spring,
 `7` summer, `9` fall. `campus` is `NB`, `NK` or `CM`. Both are validated against
@@ -26,5 +28,11 @@ npx wrangler dev
 npx wrangler deploy
 ```
 
-Free tier covers 100,000 requests/day. Because responses are cached for 30s at
-the edge, visitor count does not translate into upstream load.
+The Worker also collects an SQLite event log with recurring Durable Object
+alarms and publishes compact snapshots to the private `SNAPSHOTS` R2 binding.
+`/api/history` is a compatibility alias of `/api/snapshot`; visitor reads never
+start the collector or query SQL. Configure active terms with `HISTORY_TERMS`
+and connect Vercel / Pages using `HISTORY_API_BASE`. Vercel supplies CDN caching
+without requiring a custom domain. See [setup and observation
+semantics](../docs/seat-history.md). Collection continues without visitors;
+review your account's resource limits before deployment.

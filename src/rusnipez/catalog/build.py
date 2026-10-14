@@ -65,19 +65,10 @@ async def build(term: Term, campus: str, out_dir: Path, *, pretty: bool = False)
     courses = normalize_catalog(raw)
     payload = build_payload(courses, term, campus)
 
-    out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"catalog-{term.code}-{campus}.json"
-
-    # Write to a temp file and replace, so a reader never sees a partial file.
-    # V1 truncated its CSV in place every five seconds, which is how a reader
-    # could catch a half-written row.
-    tmp_path = out_path.with_suffix(".json.tmp")
-    with tmp_path.open("w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2 if pretty else None, separators=None if pretty else (",", ":"))
-    tmp_path.replace(out_path)
+    size_kb = await asyncio.to_thread(write_catalog, payload, out_path, pretty=pretty)
 
     counts = payload["meta"]["counts"]
-    size_kb = out_path.stat().st_size / 1024
     log.info(
         "wrote %s — %d courses, %d sections, %.0f KB",
         out_path,
@@ -86,6 +77,23 @@ async def build(term: Term, campus: str, out_dir: Path, *, pretty: bool = False)
         size_kb,
     )
     return out_path
+
+
+def write_catalog(payload: dict, out_path: Path, *, pretty: bool = False) -> float:
+    """Keep blocking filesystem work off the catalog fetcher's event loop."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write to a temp file and replace, so a reader never sees a partial file.
+    # V1 truncated its CSV in place every five seconds, which is how a reader
+    # could catch a half-written row.
+    tmp_path = out_path.with_suffix(".json.tmp")
+    with tmp_path.open("w", encoding="utf-8") as f:
+        json.dump(
+            payload, f, indent=2 if pretty else None, separators=None if pretty else (",", ":")
+        )
+    tmp_path.replace(out_path)
+
+    return out_path.stat().st_size / 1024
 
 
 def main(argv: list[str] | None = None) -> int:

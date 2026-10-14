@@ -6,3 +6,19 @@ compatibility_date = "2025-01-01"
 # Tighten this to your deployed frontend before going public.
 [vars]
 ALLOWED_ORIGINS = "*"
+HISTORY_TERMS = "92026"
+
+[[r2_buckets]]
+binding = "SNAPSHOTS"
+bucket_name = "ru-snipez-snapshots"
+
+[[durable_objects.bindings]]
+name = "SEAT_HISTORY"
+class_name = "SeatHistory"
+
+[[migrations]]
+tag = "v1-seat-history"
+new_sqlite_classes = ["SeatHistory"]
+
+[triggers]
+crons = ["* * * * *"]

@@ -4,17 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RU SnipeZ — live Rutgers section monitor</title>
-<meta name="description" content="Live open-seat monitor for Rutgers course sections. Search 16,000+ sections across all three campuses and see which are open right now.">
+<meta name="description" content="Live Rutgers seat alerts and opening history. Search 16,000+ sections and see when a section last opened, with observations collected across visits.">
 <link rel="icon" href="logo.png">
-<!-- Where the open-sections proxy lives. Empty means same origin, which is the
-     case on Cloudflare Pages where /api runs as an edge function. On a purely
+<!-- Where the prepared snapshot endpoint lives. Empty means same origin on
+     Vercel or Cloudflare Pages, where /api runs as an edge function. On a purely
      static host such as GitHub Pages, set this to your deployed Worker origin,
      for example https://ru-snipez-api.<subdomain>.workers.dev -->
 <meta name="api-base" content="">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=4f7f1f4a">
+<link rel="stylesheet" href="styles.css?v=snapshot2">
 </head>
 <body>
 
@@ -60,7 +60,7 @@
 
   <div class="intro" id="intro">
     <div class="intro-text">
-      <strong>Every section below is live.</strong> Find a class, press <em>Watch</em>, and RU SnipeZ alerts you the moment a seat frees up, with a WebReg link that already has the index filled in.
+      <strong>Know when a seat opens—and when it last opened.</strong> Find a class, check its opening history, and press <em>Watch</em> for an alert with a WebReg link ready to go.
     </div>
     <button class="linkbtn" id="intro-close" aria-label="Dismiss">✕</button>
   </div>
@@ -135,6 +135,7 @@
         <p class="resultmeta" id="results-label">Loading catalogue…</p>
         <button class="linkbtn copylink" id="copy-link" title="Copy a link that reproduces this view">Copy link to this view</button>
       </div>
+      <p class="history-note" id="history-status" role="status">Loading opening history…</p>
       <div class="courses" id="results">
         <div class="skeleton"></div>
         <div class="skeleton"></div>
@@ -344,6 +345,9 @@
     <h2>Get the class, without living in WebReg</h2>
     <p class="lede-big">Rutgers course registration rewards whoever happens to be watching. Sections fill instantly, most have no waitlist, and a seat that frees up at 3&nbsp;a.m. goes to whoever refreshed at 3:01.</p>
     <p>RU SnipeZ watches for you. Pick the sections you need, and the moment a seat opens you get an alert with a WebReg link that already has the index filled in. No refreshing, no typing a five digit number while the seat disappears.</p>
+    <h2>See when it last opened</h2>
+    <p>Each section shows its last observed opening, even after the seat closes. Shared history is collected in the background across visits, so you can check whether a section has recently had openings without keeping a tab open. Expand a section to see its opening count, last closure, average observed time open, and when tracking began.</p>
+    <p>Rutgers does not provide past opening times. This history starts when RU SnipeZ begins tracking a term and records closed-to-open changes between checks, with timestamps in Eastern time. A section already open on the first check has no known opening time. Missing history means no opening was recorded, not that the section never opened; outages can leave gaps.</p>
   </section>
 
   <section>
@@ -395,7 +399,7 @@
 
   <section>
     <h3>What is coming</h3>
-    <p>An always-on poller so web alerts arrive with the tab closed, then Web Push as the first background channel. After that: per term history showing when a section last opened and how long it stayed open, and watching by core requirement rather than by index, so a student can ask for any open section that satisfies a remaining Historical Analysis credit without knowing which course they want.</p>
+    <p>Web Push so alerts can arrive with the tab closed, then a detailed opening timeline and watching by core requirement rather than by index, so a student can ask for any open section that satisfies a remaining Historical Analysis credit without knowing which course they want.</p>
     <p>Source and architecture notes are on <a href="https://github.com/dpat0103" rel="noopener">GitHub</a>.</p>
   </section>
 
@@ -417,6 +421,6 @@
   <a href="https://github.com/dpat0103" rel="noopener">Source</a>
 </footer>
 
-<script src="app.js?v=c41a1602"></script>
+<script src="app.js?v=snapshot2"></script>
 </body>
 </html>

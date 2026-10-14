@@ -3,8 +3,8 @@
  *
  * The catalogue (titles, professors, meeting times) is a static file compiled
  * daily from the Schedule of Classes API. Only open/closed status is live, and
- * it arrives through a same-origin edge proxy because the university endpoint
- * sends no cross-origin headers.
+ * status and opening history arrive together in a prepared CDN snapshot.
+ * Visitor requests never wait for Rutgers or the historical database.
  *
  * Detection is a set difference: each cycle computes `new - previous`, so a
  * section that was already open produces no event and needs no suppression.
@@ -54,7 +54,9 @@ const state = {
   courses: [],
   sectionsByIndex: new Map(),
   open: new Set(),
-  seenOpen: new Map(),
+  lastOpened: new Map(),
+  history: null,
+  historyStatus: "loading",
   seenBaseline: false,
   watch: new Set(),
   expanded: new Set(),
@@ -149,6 +151,7 @@ async function loadCatalog(campus) {
   const response = await fetch(`data/catalog-${TERM}-${campus}.json`);
   if (!response.ok) throw new Error(`catalogue returned ${response.status}`);
   const payload = await response.json();
+  if (campus !== state.campus) return null;
 
   state.courses = payload.courses;
   state.sectionsByIndex = new Map();
@@ -196,28 +199,121 @@ function fillSelect(select, options, placeholder) {
   select.value = current;
 }
 
-async function poll() {
-  setPulse("loading", "checking…");
+async function fetchSnapshot(campus) {
+  // Resolve failures as data so a fast rejection cannot go unhandled while
+  // the catalog is still loading in parallel.
   try {
-    const response = await fetch(`${API_BASE}/api/open?term=${TERM}&campus=${state.campus}`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const indexes = await response.json();
-    applyOpenSet(new Set(indexes.map(String)));
-    state.polls += 1;
-    state.lastPollAt = new Date();
-    el.pollCount.textContent = `${state.polls} check${state.polls === 1 ? "" : "s"}`;
-    tickClock();
-  } catch (err) {
-    setPulse("error", "cannot reach Rutgers");
-    pushEvent({ kind: "error", text: `Check failed: ${esc(err.message)}. Retrying.` });
-    renderFeed();
+    const response = await fetch(`${API_BASE}/api/snapshot?term=${TERM}&campus=${campus}`, {
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!response.ok) throw new Error(`Snapshot HTTP ${response.status}`);
+    const payload = await response.json();
+    if (payload.schemaVersion !== 2 || payload.term !== TERM ||
+        !payload.sections || typeof payload.sections !== "object" || Array.isArray(payload.sections) ||
+        !Array.isArray(payload.openIndexes) || payload.openIndexes.some((i) => !/^\d{5}$/.test(String(i))) ||
+        !Number.isFinite(Date.parse(payload.checkedAt))) {
+      throw new Error("Invalid snapshot");
+    }
+    return { payload };
+  } catch (error) { return { error }; }
+}
+
+async function poll({ prepared = null } = {}) {
+  const campus = state.campus;
+  const requestId = ++pollRequestId;
+  setPulse("loading", "checking…");
+  const { payload, error } = await (prepared ?? fetchSnapshot(campus));
+  if (campus !== state.campus || requestId !== pollRequestId) return;
+  if (error) {
+    state.historyStatus = state.history ? "stale" : "unavailable";
+    setPulse("error", state.history ? "updates delayed" : "status unavailable");
+    updateHistoryNote();
+    renderResults();
+    renderWatchlist();
     return;
   }
+  // Older edge responses must not roll the UI back or duplicate notifications.
+  if (state.history?.checkedAt && Date.parse(payload.checkedAt) < Date.parse(state.history.checkedAt)) {
+    tickClock();
+    return;
+  }
+  const fresh = Date.now() - Date.parse(payload.checkedAt) <= 90_000;
+  const changed = !state.seenBaseline || state.history?.checkedAt !== payload.checkedAt;
+  state.history = payload;
+  state.historyStatus = fresh ? "ready" : "stale";
+  if (changed) {
+    applyOpenSet(new Set(payload.openIndexes.map(String)), {
+      observedAt: new Date(payload.checkedAt), fresh,
+    });
+    state.polls += 1;
+    state.lastPollAt = new Date(payload.checkedAt);
+    el.pollCount.textContent = `${state.polls} check${state.polls === 1 ? "" : "s"}`;
+  }
+  if (!fresh) setPulse("error", "updates delayed");
+  else { el.pulse.dataset.state = "live"; tickClock(); }
+  updateHistoryNote();
+  renderResults();
+  renderWatchlist();
   renderFeed();
 }
 
+let pollRequestId = 0;
+
+function updateHistoryNote() {
+  const message = {
+    loading: "Loading opening history…",
+    starting: "Opening history is starting. The first check establishes a baseline.",
+    ready: "Opening history is shared across visits. Expand a section for its last observed opening (Eastern time).",
+    stale: "Updates are delayed. Displayed seat status and opening history are from the last successful check.",
+    unavailable: "Seat status and opening history are temporarily unavailable. Course search is still available.",
+  }[state.historyStatus];
+  $("history-status").textContent = message;
+}
+
+function openingInfo(index) {
+  const shared = state.history?.sections[index];
+  const local = state.lastOpened.get(index);
+  // Prefer the collector once it has caught up to this observation interval;
+  // two observers detecting the same opening seconds apart are one event.
+  if (local && (!shared || Date.parse(shared.lastOpenedAt) < Date.parse(local.observedAfter))) {
+    return { ...local, local: true };
+  }
+  return shared;
+}
+
+function openingLabel(index, detailed = false) {
+  const record = openingInfo(index);
+  if (!record || !Number.isFinite(Date.parse(record.lastOpenedAt))) {
+    if (state.historyStatus === "loading") return "Loading opening history…";
+    if (state.historyStatus === "starting") return "Awaiting first history check";
+    if (state.historyStatus === "ready") return "No opening recorded since tracking began";
+    if (state.historyStatus === "stale") return "No opening in saved history · updates delayed";
+    return "Opening history unavailable";
+  }
+  const date = new Date(record.lastOpenedAt);
+  const stamp = date.toLocaleString("en-US", {
+    timeZone: "America/New_York", month: "short", day: "numeric",
+    ...(detailed ? { year: "numeric" } : {}),
+    hour: "numeric", minute: "2-digit", timeZoneName: "short",
+  });
+  return `${detailed ? "Observed " : "Last opened · "}${stamp}${record.local ? " · this visit" : ""}`;
+}
+
+function historyDate(value) {
+  return new Date(value).toLocaleString("en-US", {
+    timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric",
+    hour: "numeric", minute: "2-digit", timeZoneName: "short",
+  });
+}
+
+function durationLabel(seconds) {
+  if (seconds < 60) return `${seconds} seconds`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} minutes`;
+  return `${(seconds / 3600).toFixed(1)} hours`;
+}
+
 /** Diff the new open set against the previous one and announce the difference. */
-function applyOpenSet(next) {
+function applyOpenSet(next, { observedAt = new Date(), fresh = true } = {}) {
   const previous = state.open;
   state.open = next;
 
@@ -227,10 +323,9 @@ function applyOpenSet(next) {
   const openHere = [...next].filter((i) => state.sectionsByIndex.has(i)).length;
   el.statOpen.textContent = num(openHere);
 
-  const now = new Date();
-  for (const index of next) state.seenOpen.set(index, now);
+  const now = observedAt;
 
-  if (!state.seenBaseline) {
+  if (!fresh || !state.seenBaseline || (state.lastPollAt && now - state.lastPollAt > 90_000)) {
     state.seenBaseline = true;
     pushEvent({
       kind: "baseline",
@@ -243,6 +338,14 @@ function applyOpenSet(next) {
 
   const opened = [...next].filter((i) => !previous.has(i) && state.sectionsByIndex.has(i));
   const closed = [...previous].filter((i) => !next.has(i) && state.sectionsByIndex.has(i));
+
+  for (const index of opened) {
+    // Set only on closed-to-open transitions, never on baseline or preview alerts.
+    state.lastOpened.set(index, {
+      lastOpenedAt: now.toISOString(),
+      observedAfter: (state.lastPollAt ?? now).toISOString(),
+    });
+  }
 
   for (const index of opened.slice(0, 12)) {
     const { course, section } = state.sectionsByIndex.get(index);
@@ -377,7 +480,7 @@ function filtered() {
 
     const sections = course.sections.filter((s) => {
       if (hideSpn && s.spn) return false;
-      if (openOnly && !state.open.has(s.index)) return false;
+      if (openOnly && state.seenBaseline && !state.open.has(s.index)) return false;
       if (loc && !s._locs.has(loc)) return false;
       if (dayFilter.length && !dayFilter.every((d) => s._days.has(d))) return false;
       return true;
@@ -410,7 +513,8 @@ function renderResults(justOpened = new Set()) {
   );
 
   el.resultsLabel.textContent = matches.length
-    ? `${num(matches.length)} courses ${DOT} ${num(sectionCount)} sections ${DOT} ${num(openCount)} open now`
+    ? `${num(matches.length)} courses ${DOT} ${num(sectionCount)} sections ${DOT} ${
+        state.seenBaseline ? `${num(openCount)} open${state.historyStatus === "stale" ? " at last check" : " now"}` : "seat status pending"}`
     : "Nothing matches those filters.";
 
   el.reset.hidden = !isFiltered();
@@ -458,17 +562,7 @@ function renderSection(section, course, justOpened) {
   const expanded = state.expanded.has(section.index);
   const flash = justOpened.has(section.index) ? " just-opened" : "";
 
-  // A section observed open and then closed during this visit is the "just
-  // missed it" case, and the only history a tab-scoped page can honestly show.
-  const seen =
-    !isOpen && state.seenOpen.has(section.index)
-      ? `<span class="seen" title="Seen open during this visit">seen ${timeLabel(
-          state.seenOpen.get(section.index)
-        )}</span>`
-      : "";
-
   const badges = [
-    seen,
     section.spn
       ? '<span class="badge spn" title="Requires a special permission number">SPN</span>'
       : "",
@@ -487,9 +581,10 @@ function renderSection(section, course, justOpened) {
         section.instructors.join(", ") || "Instructor TBA"
       )}</span>
       <span class="meets">${esc(meetingText(section.meets))}</span>
+      <span class="opening-history">${esc(openingLabel(section.index))}</span>
     </span>
     <span class="badges">${badges}</span>
-    <span class="status ${isOpen ? "open" : "closed"}">${isOpen ? "OPEN" : "CLOSED"}</span>
+    <span class="status ${!state.seenBaseline ? "unknown" : isOpen ? "open" : "closed"}">${!state.seenBaseline ? "—" : isOpen ? "OPEN" : "CLOSED"}</span>
     <button class="watch" data-index="${esc(section.index)}" aria-pressed="${watched}">
       ${watched ? "Watching" : "Watch"}
     </button>
@@ -506,6 +601,24 @@ function renderDetail(section, course) {
     )}">copy</button>`,
   ]);
   rows.push(["Section", `${esc(section.number)} of ${esc(course.code)}`]);
+  rows.push(["Last opened", esc(openingLabel(section.index, true))]);
+  const record = openingInfo(section.index);
+  if (record && !record.local) {
+    rows.push(["Recorded openings", esc(record.openingCount)]);
+    if (record.lastClosedAt) rows.push(["Last closed", esc(historyDate(record.lastClosedAt))]);
+    if (record.averageOpenSeconds != null) {
+      rows.push(["Average time open", `About ${esc(durationLabel(record.averageOpenSeconds))} across ${
+        esc(record.completedOpenings)} fully observed opening${record.completedOpenings === 1 ? "" : "s"}`]);
+    }
+  }
+  if (record?.observedAfter) {
+    rows.push(["Observation", "Times and durations are approximate observations between checks. Duration averages exclude collection gaps."]);
+  }
+  if (state.history?.startedAt) {
+    rows.push(["Tracking since", esc(new Date(state.history.startedAt).toLocaleString("en-US", {
+      timeZone: "America/New_York", timeZoneName: "short",
+    }))]);
+  }
   if (section.subtitle) rows.push(["Topic", esc(section.subtitle)]);
   rows.push([
     "Meets",
@@ -598,8 +711,9 @@ function renderWatchlist() {
         <span>
           <span class="wl-title">${esc(course.title)}</span>
           <span class="wl-meta">${esc(index)} ${DOT} sec ${esc(section.number)} ${DOT} ${esc(when)}</span>
+          <span class="opening-history">${esc(openingLabel(index))}</span>
         </span>
-        <span class="status ${isOpen ? "open" : "closed"}">${isOpen ? "OPEN" : "CLOSED"}</span>
+        <span class="status ${!state.seenBaseline ? "unknown" : isOpen ? "open" : "closed"}">${!state.seenBaseline ? "—" : isOpen ? "OPEN" : "CLOSED"}</span>
         <span class="wl-actions">
           <button class="linkbtn" data-preview="${esc(index)}" title="Preview the alert">◉</button>
           <button class="wl-remove" data-unwatch="${esc(index)}" title="Stop watching ${esc(
@@ -819,14 +933,17 @@ el.reset.addEventListener("click", () => {
 
 el.campus.addEventListener("change", async () => {
   state.campus = el.campus.value;
+  const campus = state.campus;
   state.seenBaseline = false;
-  state.seenOpen.clear();
+  state.lastOpened.clear();
   state.events = [];
   state.expanded.clear();
+  const prepared = fetchSnapshot(campus);
   el.results.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
   await loadCatalog(state.campus);
+  if (campus !== state.campus) return;
   syncUrl();
-  await poll();
+  await poll({ prepared });
 });
 
 el.loadMore.addEventListener("click", () => {
@@ -1017,6 +1134,7 @@ async function main() {
 
   const params = new URLSearchParams(location.search);
   if (CAMPUS_NAMES[params.get("campus")]) state.campus = params.get("campus");
+  const prepared = fetchSnapshot(state.campus);
 
   try {
     await loadCatalog(state.campus);
@@ -1031,10 +1149,9 @@ async function main() {
 
   readUrl();
   renderResults();
-  await poll();
-
   setInterval(poll, POLL_SECONDS * 1000);
   setInterval(tickClock, 1000);
+  await poll({ prepared });
 }
 
 main();

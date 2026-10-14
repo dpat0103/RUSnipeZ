@@ -140,7 +140,9 @@ class TestNormalizeSection:
         assert normalize_section({"number": "01", "index": ""}) is None
 
     def test_spn_flag_follows_add_code_presence(self) -> None:
-        assert normalize_section({"index": "12345", "specialPermissionAddCode": None})["spn"] is False
+        assert (
+            normalize_section({"index": "12345", "specialPermissionAddCode": None})["spn"] is False
+        )
         assert normalize_section({"index": "12345", "specialPermissionAddCode": "P"})["spn"] is True
 
 

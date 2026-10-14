@@ -287,7 +287,7 @@ select {
 .sections { display: flex; flex-direction: column; }
 .section {
   display: grid;
-  grid-template-columns: 62px 34px minmax(0, 1fr) auto auto;
+  grid-template-columns: 62px 34px minmax(0, 1fr) auto auto auto;
   gap: 12px;
   align-items: center;
   padding: 10px 16px;
@@ -1065,6 +1065,22 @@ table.spec .badge { margin: 0 2px; }
 }
 
 .event.simulated .what strong { color: var(--spn); }
+
+.opening-history {
+  display: block;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+.status.unknown { color: var(--text-3); }
+.history-note {
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
 
 @media (max-width: 720px) {
   .controls.filters { gap: 8px; }

@@ -13,7 +13,15 @@
  * validated against allowlists so this cannot be pointed at arbitrary hosts.
  */
 
+export { SeatHistory } from "./history.js";
+import { readSnapshot } from "./snapshots.js";
+
 const UPSTREAM = "https://classes.rutgers.edu/soc/api";
+
+function historyTerms(env) {
+  return (env.HISTORY_TERMS ?? "92026").split(",").map((s) => s.trim())
+    .filter((s) => TERM_PATTERN.test(s));
+}
 
 // Matches upstream's own max-age. Polling faster buys nothing.
 const CACHE_SECONDS = 30;
@@ -53,6 +61,14 @@ function problem(status, detail, request, env) {
 }
 
 export default {
+  async scheduled(_event, env, ctx) {
+    // Also arms the collector immediately after deployment, without visitors.
+    // A minute-level watchdog restores an alarm if a storage failure stopped it.
+    ctx.waitUntil(Promise.all(historyTerms(env).map((term) =>
+      env.SEAT_HISTORY.get(env.SEAT_HISTORY.idFromName(term))
+        .fetch(`https://history.internal/arm?term=${term}`)
+    )));
+  },
   async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(request, env) });
@@ -62,6 +78,12 @@ export default {
     }
 
     const url = new URL(request.url);
+    if (url.pathname === "/api/snapshot" || url.pathname === "/api/history") {
+      const response = await readSnapshot(request, env, ctx);
+      const result = new Response(response.body, response);
+      for (const [key, value] of Object.entries(corsHeaders(request, env))) result.headers.set(key, value);
+      return result;
+    }
     const upstreamFile = ROUTES[url.pathname];
     if (!upstreamFile) {
       return problem(404, `Unknown path. Try ${Object.keys(ROUTES).join(" or ")}.`, request, env);
