@@ -8,7 +8,7 @@
   </p>
   <p>
     <img alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white">
-    <img alt="tests" src="https://img.shields.io/badge/tests-43%20passing-3DD68C">
+    <a href="https://github.com/dpat0103/RUSnipeZ/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dpat0103/RUSnipeZ/actions/workflows/ci.yml/badge.svg"></a>
     <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
   </p>
 </div>
@@ -117,14 +117,17 @@ So the boundary is fixed: RU SnipeZ detects the opening and delivers the alert w
 Static frontend, background collector, and thin delivery adapters:
 
 ```
-src/rusnipez/soc/      term encoding, async API client, payload normalizer
-src/rusnipez/catalog/  catalogue builder; daily CI rebuilds across all three campuses as artifacts
-web/                   the site itself: static HTML/CSS/JS, no framework, no build step
+src/rusnipez/soc/       term encoding, async API client, payload normalizer
+src/rusnipez/catalog/   catalogue builder; daily CI rebuilds all campuses as artifacts
+web/                   static HTML/CSS and catalog data; no framework or build step
+web/js/                native ES modules for search, detection, data, rendering and browser wiring
+web/functions/api/     Cloudflare Pages adapters for same-origin API routes
 lib/                   Request/Response helpers for SOC, history and snapshot delivery
 api/                   Vercel edge adapters, including the site's /api/snapshot route
 worker/                Cloudflare collector, SQLite event log, R2 publication and snapshot delivery
-scripts/devserver.py   a local server that mirrors production so development needs no cloud account
+scripts/devserver.py   local static server and API proxy to the Worker
 tests/                 Python normalization/term tests; Node history, snapshot and frontend tests
+.github/workflows/     CI validation and scheduled catalog artifact builds
 legacy/v1/             the original bot, kept for reference
 ```
 
