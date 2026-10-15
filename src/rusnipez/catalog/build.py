@@ -7,7 +7,7 @@ to recover data the page itself had fetched as JSON. One request now does it.
 
 Usage::
 
-    python -m rusnipez.catalog.build --term 92026 --campus NB
+    python -m rusnipez.catalog.build --term 02027 --campus NB
 """
 
 from __future__ import annotations
@@ -98,7 +98,9 @@ def write_catalog(payload: dict, out_path: Path, *, pretty: bool = False) -> flo
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--term", default="92026", help="WebReg term code, e.g. 92026 (Fall 2026)")
+    parser.add_argument(
+        "--term", default="02027", help="WebReg term code, e.g. 02027 (Winter 2027)"
+    )
     parser.add_argument("--campus", default="NB", help="Campus code: NB, NK or CM")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT_DIR, help="output directory")
     parser.add_argument("--pretty", action="store_true", help="indent the JSON (much larger)")

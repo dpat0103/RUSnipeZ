@@ -2,7 +2,7 @@ import { state, loadWatch, saveWatch } from "./state.js";
 import { CAMPUS_NAMES, DEFAULT_FILTERS, INTRO_KEY, PAGE_SIZE, POLL_SECONDS } from "./config.js";
 import { $, el } from "./dom.js";
 import { esc, toast, debounce } from "./util.js";
-import { loadCatalog, fetchSnapshot, poll } from "./data.js";
+import { loadCatalog, fetchOpen, fetchDailyHistory, loadDailyHistory, poll } from "./data.js";
 import { renderResults, renderWatchlist, renderFeed, showAlert, pushEvent, announce } from "./render.js";
 import { syncUrl, readUrl, applyFiltersToControls } from "./url.js";
 import { setPulse, tickClock } from "./status.js";
@@ -74,10 +74,10 @@ export function wireEvents() {
     state.campus = el.campus.value;
     const campus = state.campus;
     state.seenBaseline = false;
-    state.lastOpened.clear();
+    state.lastSeenOpen.clear();
     state.events = [];
     state.expanded.clear();
-    const prepared = fetchSnapshot(campus);
+    const prepared = fetchOpen(campus);
     el.results.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
     await loadCatalog(state.campus);
     if (campus !== state.campus) return;
@@ -277,7 +277,8 @@ export async function main({
 
   const params = new URLSearchParams(location.search);
   if (CAMPUS_NAMES[params.get("campus")]) state.campus = params.get("campus");
-  const prepared = fetchSnapshot(state.campus);
+  const prepared = fetchOpen(state.campus);
+  const historyPrepared = fetchDailyHistory();
 
   try {
     await catalog(state.campus);
@@ -294,7 +295,8 @@ export async function main({
   render();
   schedule(poll, POLL_SECONDS * 1000);
   schedule(tickClock, 1000);
-  await poll({ prepared });
+  schedule(loadDailyHistory, 3600_000);
+  await Promise.all([poll({ prepared }), loadDailyHistory({ prepared: historyPrepared })]);
 }
 
 if (typeof document !== "undefined") {

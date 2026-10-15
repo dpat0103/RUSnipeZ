@@ -1,5 +1,11 @@
 # ru-snipez-api
 
+> The continuous history collector is retired. Collection and cron are disabled
+> in `wrangler.toml`; saved snapshots remain readable during migration. The
+> maintained website now uses daily GitHub Actions history and its own live SOC
+> proxy. Follow [daily history setup](../docs/seat-history.md). The implementation
+> below is retained for backup, migration and shutdown verification.
+
 Edge proxy for the Rutgers Schedule of Classes API. Adds CORS headers (upstream
 sends none, so browsers cannot call it directly) and caches responses for 30
 seconds at the edge, matching upstream's own `max-age`.

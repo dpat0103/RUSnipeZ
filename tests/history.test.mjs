@@ -178,19 +178,18 @@ test("watchdog starts configured collectors only", async () => {
   assert.deepEqual(names, ["92026", "12027"]);
 });
 
-test("history proxy validates, forwards normalized params and handles outages", async (t) => {
+test("daily proxy validates, reads the public data branch and handles outages", async (t) => {
   const req = new Request("https://site/api/history?term=92026&campus=nk");
-  assert.equal((await historyProxy(req)).status, 503);
   assert.equal((await historyProxy(new Request("https://site/?term=bad"), "https://worker")).status, 400);
   const mock = t.mock.method(globalThis, "fetch", async (url) => {
-    assert.equal(String(url), "https://worker/api/snapshot?term=92026&campus=NK");
-    return Response.json({ term: "92026", sections: {} });
+    assert.equal(String(url), "https://raw.githubusercontent.com/dpat0103/RUSnipeZ/history-data/history-92026.json");
+    return Response.json({ schemaVersion: 3, term: "92026", sampling: "daily", checkedAt: new Date().toISOString(), sections: {} });
   });
-  const response = await historyProxy(req, "https://worker");
+  const response = await historyProxy(req);
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("cache-control"), "public, max-age=5, s-maxage=15, stale-while-revalidate=60");
+  assert.match(response.headers.get("cache-control"), /s-maxage=3600/);
   mock.mock.mockImplementation(async () => { throw new Error("offline"); });
-  assert.equal((await historyProxy(req, "https://worker")).status, 503);
+  assert.equal((await historyProxy(req)).status, 503);
 });
 
 test("open payload validation accepts empty sets and rejects malformed snapshots", () => {

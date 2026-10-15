@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       term:
-        description: "WebReg term code (e.g. 92026)"
+        description: "WebReg term code (e.g. 02027)"
         required: false
-        default: "92026"
+        default: "02027"
 
 jobs:
   build:
@@ -30,7 +30,7 @@ jobs:
       - name: Build catalogue
         run: |
           .venv/bin/python -m rusnipez.catalog.build \
-            --term "${{ inputs.term || '92026' }}" \
+            --term "${{ inputs.term || '02027' }}" \
             --campus "${{ matrix.campus }}" \
             --out data
 
@@ -42,7 +42,8 @@ jobs:
               data = json.loads(path.read_text(encoding="utf-8"))
               counts = data["meta"]["counts"]
               print(f"{path.name}: {counts['courses']} courses, {counts['sections']} sections")
-              if counts["courses"] < 100:
+              minimum = 1 if data["meta"]["term"].startswith("0") else 100
+              if counts["courses"] < minimum or counts["sections"] < 1:
                   sys.exit(f"{path.name} looks truncated — refusing to publish")
           PY
 

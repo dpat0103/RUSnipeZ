@@ -59,22 +59,19 @@ export function fillSelect(select, options, placeholder) {
   select.value = current;
 }
 
-export async function fetchSnapshot(campus) {
+export async function fetchOpen(campus) {
   // Resolve failures as data so a fast rejection cannot go unhandled while
   // the catalog is still loading in parallel.
   try {
-    const response = await fetch(`${apiBase()}/api/snapshot?term=${TERM}&campus=${campus}`, {
+    const response = await fetch(`${apiBase()}/api/open?term=${TERM}&campus=${campus}`, {
       signal: AbortSignal.timeout(5_000),
     });
-    if (!response.ok) throw new Error(`Snapshot HTTP ${response.status}`);
-    const payload = await response.json();
-    if (payload.schemaVersion !== 2 || payload.term !== TERM ||
-        !payload.sections || typeof payload.sections !== "object" || Array.isArray(payload.sections) ||
-        !Array.isArray(payload.openIndexes) || payload.openIndexes.some((i) => !/^\d{5}$/.test(String(i))) ||
-        !Number.isFinite(Date.parse(payload.checkedAt))) {
-      throw new Error("Invalid snapshot");
+    if (!response.ok) throw new Error(`Live status HTTP ${response.status}`);
+    const indexes = await response.json();
+    if (!Array.isArray(indexes) || indexes.some((i) => !/^\d{5}$/.test(String(i)))) {
+      throw new Error("Invalid open-section response");
     }
-    return { payload };
+    return { indexes: indexes.map(String), observedAt: new Date() };
   } catch (error) { return { error }; }
 }
 
@@ -82,42 +79,57 @@ export async function poll({ prepared = null } = {}) {
   const campus = state.campus;
   const requestId = ++pollRequestId;
   setPulse("loading", "checking…");
-  const { payload, error } = await (prepared ?? fetchSnapshot(campus));
+  const { indexes, observedAt, error } = await (prepared ?? fetchOpen(campus));
   if (campus !== state.campus || requestId !== pollRequestId) return;
   if (error) {
-    state.historyStatus = state.history ? "stale" : "unavailable";
-    setPulse("error", state.history ? "updates delayed" : "status unavailable");
-    updateHistoryNote();
+    state.liveStatus = state.seenBaseline ? "stale" : "unavailable";
+    setPulse("error", state.seenBaseline ? "live updates delayed" : "status unavailable");
     renderResults();
     renderWatchlist();
     return;
   }
-  // Older edge responses must not roll the UI back or duplicate notifications.
-  if (state.history?.checkedAt && Date.parse(payload.checkedAt) < Date.parse(state.history.checkedAt)) {
-    tickClock();
-    return;
-  }
-  const fresh = Date.now() - Date.parse(payload.checkedAt) <= 90_000;
-  const changed = !state.seenBaseline || state.history?.checkedAt !== payload.checkedAt;
-  state.history = payload;
-  state.historyStatus = fresh ? "ready" : "stale";
-  if (changed) {
-    renderOpenSet(new Set(payload.openIndexes.map(String)), {
-      observedAt: new Date(payload.checkedAt), fresh,
-    });
-    state.polls += 1;
-    state.lastPollAt = new Date(payload.checkedAt);
-    el.pollCount.textContent = `${state.polls} check${state.polls === 1 ? "" : "s"}`;
-  }
-  if (!fresh) setPulse("error", "updates delayed");
-  else { el.pulse.dataset.state = "live"; tickClock(); }
-  updateHistoryNote();
+  if (state.lastPollAt && observedAt < state.lastPollAt) return;
+  renderOpenSet(new Set(indexes), { observedAt });
+  state.polls += 1;
+  state.lastPollAt = observedAt;
+  state.liveStatus = "ready";
+  el.pollCount.textContent = `${state.polls} check${state.polls === 1 ? "" : "s"}`;
+  el.pulse.dataset.state = "live";
+  tickClock();
   renderResults();
   renderWatchlist();
   renderFeed();
 }
 
 let pollRequestId = 0;
+
+export async function fetchDailyHistory() {
+  try {
+    const response = await fetch(`${apiBase()}/api/history?term=${TERM}`, {
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!response.ok) throw new Error(`Daily history HTTP ${response.status}`);
+    const payload = await response.json();
+    if (payload.schemaVersion !== 3 || payload.term !== TERM || payload.sampling !== "daily" ||
+        !Number.isFinite(Date.parse(payload.checkedAt)) ||
+        !payload.sections || typeof payload.sections !== "object" || Array.isArray(payload.sections)) {
+      throw new Error("Invalid daily history");
+    }
+    return { payload };
+  } catch (error) { return { error }; }
+}
+
+export async function loadDailyHistory({ prepared = null } = {}) {
+  const { payload, error } = await (prepared ?? fetchDailyHistory());
+  if (error) state.historyStatus = state.history ? "stale" : "unavailable";
+  else if (!state.history || Date.parse(payload.checkedAt) >= Date.parse(state.history.checkedAt)) {
+    state.history = payload;
+    state.historyStatus = Date.now() - Date.parse(payload.checkedAt) > 48 * 3600_000 ? "stale" : "ready";
+  }
+  updateHistoryNote();
+  renderResults();
+  renderWatchlist();
+}
 
 export function apiBase() {
   return (document.querySelector('meta[name="api-base"]')?.content || "").replace(/\/$/, "");

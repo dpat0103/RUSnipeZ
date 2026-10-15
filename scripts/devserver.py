@@ -1,8 +1,7 @@
-"""Local dev server: serves web/ and mirrors the Cloudflare Worker's /api routes.
+"""Local dev server: serves web/, live SOC status, and saved daily history.
 
-The deployed site talks to the Worker in worker/. This reproduces the same
-contract locally so the frontend can be developed without wrangler or a
-Cloudflare account.
+Daily history is loaded from web/data/history-TERM.json. Live status is fetched
+through the same cached Rutgers proxy contract as production.
 
     python scripts/devserver.py  ->  http://localhost:8788
 """
@@ -12,7 +11,6 @@ from __future__ import annotations
 import argparse
 import gzip
 import json
-import os
 import re
 import urllib.error
 import urllib.request
@@ -85,16 +83,12 @@ class Handler(SimpleHTTPRequestHandler):
             campus = (query.get("campus") or ["NB"])[0].upper()
             if not TERM_PATTERN.fullmatch(term) or campus not in CAMPUSES:
                 return self._problem(400, "Invalid term or campus.")
-            base = os.environ.get("HISTORY_API_BASE", "").rstrip("/")
-            if not base:
-                return self._problem(503, "Shared history is not configured.")
-            try:
-                url = f"{base}{parsed.path}?term={term}&campus={campus}"
-                with urllib.request.urlopen(url, timeout=10) as response:
-                    body = response.read()
-                return self._send(200, body, "application/json; charset=utf-8", "no-store")
-            except (urllib.error.URLError, TimeoutError):
-                return self._problem(502, "Shared history is temporarily unavailable.")
+            saved = WEB_ROOT / "data" / f"history-{term}.json"
+            if not saved.exists():
+                return self._problem(503, "Run the daily history command to create a local sample.")
+            return self._send(
+                200, saved.read_bytes(), "application/json; charset=utf-8", "no-store"
+            )
         file = ROUTES.get(parsed.path)
         if file is None:
             return super().do_GET()

@@ -2,7 +2,7 @@
   <img src="RU_snipeZ_logo.png" alt="RU SnipeZ" width="150" />
   <h1>RU SnipeZ</h1>
   <p><strong>Live open-seat monitor for Rutgers course registration.</strong><br>
-  Search sections across all three campuses, see when a section last opened, watch the ones you need, and get a WebReg link with the index already filled in when an opening is observed.</p>
+  Search sections across all three campuses, see the last date a section was observed open, watch the ones you need, and get a WebReg link with the index already filled in when an opening is observed.</p>
   <p>
     <a href="https://ru-snipez.vercel.app"><strong>ru-snipez.vercel.app</strong></a>
   </p>
@@ -55,13 +55,13 @@ Filter by meeting day, campus location or core requirement code, sort by open se
 
 ## How the detection actually works
 
-### Last-opened history
+### Daily last-seen-open history
 
-Section rows, expanded details and the watchlist show the last **observed closed-to-open transition**, in Eastern time. Expanded details also show the number of recorded openings, last closure, and average observed time open. A SQLite-backed Cloudflare Durable Object collects the university-wide open set approximately every 30 seconds, independently of visitors, and records openings, closures, and collection gaps by term and index. The campus catalog determines which indexes appear on each campus view. A minute-level cron starts the collector after deployment and restores its alarm if needed.
+Section rows, expanded details and the watchlist show the last **date a section was seen open**, using Eastern calendar dates. One GitHub Actions job checks the university-wide open set daily and saves per-term JSON on the dedicated `history-data` branch. Sections absent from a later snapshot retain their previous last-seen date. Same-day retries never double-count a day. Historical observations continue even when nobody visits the site.
 
-The collector publishes a compact status/history snapshot to private Cloudflare R2 storage. Vercel's CDN serves it through `/api/snapshot`; visitors never wait on Rutgers or query the historical database. The browser requests the catalog and snapshot together and renders courses as soon as the catalog arrives. No purchased domain is needed.
+The same-origin `/api/history` route serves this public JSON through Vercel's cache. Live status is separate: the open page checks `/api/open` every 30 seconds and delivers watched-seat alerts. Catalog, live status and history requests start concurrently; unavailable history never blocks search or live checks. No Cloudflare collector, R2 subscription, hosted database or purchased domain is required for this history design.
 
-History starts at the collector's first successful check; it cannot reconstruct past openings from Rutgers. The first snapshot establishes a baseline without inventing opening times for seats already open. Failed or malformed responses leave the last good snapshot intact; after a gap longer than 90 seconds, the collector establishes a fresh baseline. Timestamps are observations between checks, not exact registration times. Missing records do not mean a section never opened. See [history setup](docs/seat-history.md) to enable shared collection on your deployment.
+This is deliberately sampled history. A daily snapshot cannot establish an opening time or catch seats that open and close between snapshots. The UI says **Last seen open**, shows the last daily check, and does not calculate opening frequencies or durations from daily samples. Dates observed live during the current visit can appear with a `this visit` label. Existing dated evidence from the retired collector can seed the daily records. See [history setup](docs/seat-history.md).
 
 The endpoint Rutgers exposes, `openSections.json`, returns a flat array of every currently open index. The naive approach is to check that array on a timer and fire a notification whenever your section appears in it, which means firing again on the next check, and the one after that, for as long as the seat stays open. V1 solved that with a ten minute cooldown per user, tracked in memory, which meant a bot restart during registration week could re-notify everyone whose sections happened to be open at that moment.
 
@@ -70,15 +70,11 @@ The actual fix was to stop asking a yes or no question and start computing a dif
 ```
                     ┌─ courses.json  (daily)  ──► catalogue build ──► static file on a CDN
 Schedule of Classes ┤
-                    └─ openSections.json (30s) ──► background collector
-                                                  │ new − previous = openings
-                                                  ▼
-                                             SQLite history ──► R2 snapshot ──► CDN
-                                                                                │
-                                         open browser: compare snapshots ◄───────┘
-                                                  │ watched opening
-                                                  ▼
-                                         alert + pre-filled WebReg link
+                    ├─ openSections.json (daily) ──► GitHub Actions ──► history-data JSON ──► CDN
+                    └─ openSections.json (30s, open tab) ──► cached proxy ──► browser set difference
+                                                                                 │
+                                                                                 ▼
+                                                               alert + pre-filled WebReg link
 ```
 
 A section that was already open is not in that difference, so it produces no event and needs no cooldown to suppress. The correctness comes from the shape of the computation, not from a rule bolted on to patch a symptom.
@@ -91,7 +87,7 @@ Rutgers doesn't publish documentation for these endpoints. Everything below came
 
 **Two endpoints ignore the parameters they accept.** `courses.json` takes a `subject` filter and returns the entire campus catalogue regardless, which is good news since it means the whole catalogue is one request instead of one per department. `openSections.json` takes a `campus` filter and does the same thing in reverse: it returns every open section university-wide no matter which campus you ask for. That one cost real correctness until I caught it, because the demo's headline "sections open" counter was reading 11,444 on the Camden page, which is New Brunswick's number, not Camden's. Fixed by intersecting the response against the catalogue actually loaded for that campus, since that's the only list that knows what belongs where.
 
-**Index numbers get reused across terms.** 3,059 index numbers valid in one recent term are also valid in a different term entirely, attached to unrelated courses. An index by itself is not a stable identifier for history across semesters, so the shared collector isolates each term in its own Durable Object and stores history by index within that term. Campus membership comes from the catalog. Browser watchlists store only indexes locally, so they need review when changing terms.
+**Index numbers get reused across terms.** 3,059 index numbers valid in one recent term are also valid in a different term entirely, attached to unrelated courses. History is therefore isolated in one JSON file per term, indexed by section index; campus membership comes from the catalog. Browser watchlists are stored separately for each term so reused indexes cannot carry a Fall watch into Winter.
 
 **Cross-listed sections have separate seat pools.** A class taught once but listed under two departments gets two index numbers, and they open and close independently. In a Fall 2026 snapshot, 254 of the 970 cross-listed pairs were in a split state, one side open and the other closed. Watching only one side can miss an opening, so the alert offers to add other cross-listed indexes present in the loaded campus catalog.
 
@@ -114,38 +110,44 @@ So the boundary is fixed: RU SnipeZ detects the opening and delivers the alert w
 
 ## How it's built
 
-Static frontend, background collector, and thin delivery adapters:
+Static frontend, daily observation pipeline, and thin API adapters:
 
 ```
 src/rusnipez/soc/       term encoding, async API client, payload normalizer
 src/rusnipez/catalog/   catalogue builder; daily CI rebuilds all campuses as artifacts
+src/rusnipez/history/   daily observation builder and legacy snapshot importer
 web/                   static HTML/CSS and catalog data; no framework or build step
 web/js/                native ES modules for search, detection, data, rendering and browser wiring
 web/functions/api/     Cloudflare Pages adapters for same-origin API routes
 lib/                   Request/Response helpers for SOC, history and snapshot delivery
-api/                   Vercel edge adapters, including the site's /api/snapshot route
-worker/                Cloudflare collector, SQLite event log, R2 publication and snapshot delivery
-scripts/devserver.py   local static server and API proxy to the Worker
+api/                   Vercel adapters for live SOC status and cached daily history
+worker/                retired continuous collector; empty schedule and collection allowlist
+scripts/devserver.py   local static server, cached SOC proxy and saved daily-history reader
 tests/                 Python normalization/term tests; Node history, snapshot and frontend tests
-.github/workflows/     CI validation and scheduled catalog artifact builds
+.github/workflows/     CI validation, catalog artifact builds and daily history publication
 legacy/v1/             the original bot, kept for reference
 ```
 
-The frontend has no framework: the application renders a filtered catalog and checks prepared snapshots every 30 seconds. Course data is compiled into static files and served from a CDN. Daily CI builds upload catalog artifacts; updating the site's bundled catalogs and deploying them is still a separate step. The background Worker owns the SQLite event log and publishes R2 snapshots; thin Vercel and Pages adapters expose those stored snapshots on the site's own origin. SQL writes and live Rutgers requests stay out of the page-loading path.
+The frontend has no framework. Search renders as soon as the static catalog arrives. Live status is checked every 30 seconds through a cached proxy; historical JSON is fetched independently and refreshed hourly in the browser. A single daily Actions job publishes the history data branch without rebuilding the application. Catalog CI still uploads artifacts; deploying refreshed catalog files remains a separate step.
 
-Rutgers sends no CORS headers on either endpoint, so browsers cannot call them directly. The background collector fetches Rutgers server-side; the frontend reads stored snapshots through same-origin Vercel or Pages adapters. SOC proxy routes remain available for direct API access. The JavaScript HTTP handlers use the web platform's standard `Request` and `Response` types.
+Rutgers sends no CORS headers, so live browser checks use same-origin Vercel or Pages adapters. Daily history is read from the public data branch through another cached same-origin adapter. The handlers use the web platform's standard `Request` and `Response` types.
 
 ## Try it yourself
+
+The active registration term is **Winter 2027** (`02027`). Application code stays on
+`main`, with short-lived branches for fixes and term rollovers. Catalogs and history
+files include the term code; previous terms can remain archived alongside the active
+one. Browser watches are isolated by term, so Winter starts with a fresh watchlist.
 
 ```bash
 git clone https://github.com/dpat0103/RUSnipeZ.git
 cd RUSnipeZ
 pip install -e ".[dev]"
-python -m rusnipez.catalog.build --term 92026 --campus NB --out web/data
+python -m rusnipez.catalog.build --term 02027 --campus NB --out web/data
 python scripts/devserver.py
 ```
 
-Then open `http://localhost:8788`. To enable live status/history, also run the local Worker and point `HISTORY_API_BASE` at it; [the local setup instructions](docs/seat-history.md#local-development) cover both terminals and the cron trigger. Wrangler emulates SQLite and R2 without a Vercel or Cloudflare account. The catalog remains searchable when snapshots are unavailable.
+Then open `http://localhost:8788`. Generate a local daily observation with `python -m rusnipez.history.daily --term 02027 --out web/data/history-02027.json`. No Worker, cloud account or billing configuration is needed. See [daily history setup](docs/seat-history.md).
 
 Use Node 24 for the Node tests, which exercise the built-in SQLite API.
 
@@ -159,17 +161,17 @@ CI runs Python and Node tests, lint and format checks on pushes to `main` and pu
 
 ## Deploying your own copy
 
-The catalog and frontend are static files. Live status and shared history also require the background Worker, its SQLite Durable Object and private R2 bucket, plus a snapshot route accessible to the frontend. Follow [history setup](docs/seat-history.md) to configure collection and delivery.
+The catalog and frontend are static files. Live status needs the included SOC proxy; daily history needs the included Actions workflow on the repository's default branch. Follow [history setup](docs/seat-history.md) to publish the data branch and retire the old collector.
 
-**Vercel:** deploy the Worker and configure `HISTORY_API_BASE` with its origin, then run `npx vercel --prod`. `vercel.json` points the static output at `web/`; `api/snapshot.js` forwards stored snapshots through Vercel's CDN. This is the architecture used by [ru-snipez.vercel.app](https://ru-snipez.vercel.app).
+**Vercel:** deploy this repository using the included `vercel.json`. `/api/open` provides live status; `/api/history` reads the `history-data` branch. `HISTORY_REPOSITORY` defaults to `dpat0103/RUSnipeZ`; forks should override it. Remove the obsolete `HISTORY_API_BASE` setting.
 
-**Cloudflare Pages:** deploy the Worker and configure `HISTORY_API_BASE` for Pages, then run `npx wrangler pages deploy . --project-name ru-snipez` from `web/`. This makes `web/functions/` the [Pages project's Functions directory](https://developers.cloudflare.com/pages/functions/get-started/). Its API adapters provide the same-origin snapshot route; see [history setup](docs/seat-history.md) for configuration.
+**Cloudflare Pages:** the included `web/functions/api/` adapters provide the same live and daily-history endpoints. No background collector or R2 bucket is needed. Forks should set `HISTORY_REPOSITORY` to their public repository.
 
-**A purely static host,** such as GitHub Pages, needs the deployed [`worker/`](worker/) with collection and R2 configured. Point the page at it with `<meta name="api-base" content="https://your-worker.workers.dev">`, allow the site's origin in the Worker's CORS settings, and permit the Worker origin in the host's CSP `connect-src` policy if one is set. Search and the catalogue still work without snapshots; live status and shared history do not.
+**A purely static host** needs a separately hosted API adapter, set through the `api-base` meta tag and permitted by the site's CSP. The Vercel deployment is the simplest complete setup for this repository.
 
 ## What's next
 
-Shared history collection already runs in the background for configured terms: the Cloudflare Durable Object polls approximately every 30 seconds, and the cron watchdog keeps its alarm armed independently of visitors. Website alert delivery still requires an open, running tab. The browser compares snapshots and displays alerts for watched openings; optional desktop notifications use the page's `Notification` API. The next step is **Web Push**, with server-side watch subscriptions and a service worker, so alerts can reach students when the site is closed.
+Daily history collection runs independently of visitors. Live website alerts still require an open, running tab; optional desktop notifications use the page's `Notification` API. A future **Web Push** implementation would require a separately budgeted background detection and subscription service.
 
 After that: a detailed opening timeline, a nudge to watch both sides of a cross-listed pair automatically, and letting a student watch a **core requirement** instead of an index, so they can ask for any open section that satisfies their remaining Historical Analysis credit without knowing in advance which course they want.
 
