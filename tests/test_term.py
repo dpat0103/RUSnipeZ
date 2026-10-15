@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from rusnipez.soc.term import FALL, SPRING, Term
+from rusnipez.soc.term import FALL, SPRING, WINTER, Term
 
 
 class TestParse:
@@ -14,6 +14,13 @@ class TestParse:
     def test_splits_term_digit_from_year(self) -> None:
         term = Term.parse("92026")
         assert (term.term, term.year) == (FALL, 2026)
+
+    def test_winter_preserves_leading_zero_for_webreg_and_soc(self) -> None:
+        term = Term.parse("02027")
+        assert (term.term, term.year) == (WINTER, 2027)
+        assert term.code == "02027"
+        assert str(term) == "Winter 2027"
+        assert term.soc_params("NB") == {"year": "2027", "term": "0", "campus": "NB"}
 
     @pytest.mark.parametrize("bad", ["", "9202", "920266", "x2026", "9 2026"])
     def test_rejects_malformed(self, bad: str) -> None:

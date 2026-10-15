@@ -2,7 +2,7 @@ import { state } from "./state.js";
 import { TERM_NAME, CAMPUS_NAMES, LOCATION_NAMES, WEBREG, MAX_EVENTS, PAGE_SIZE } from "./config.js";
 import { el } from "./dom.js";
 import { esc, num, clock, meetingText, timeLabel, DOT } from "./util.js";
-import { applyOpenSet, openingInfo, openingLabel, historyDate, durationLabel } from "./detection.js";
+import { applyOpenSet, openingInfo, openingLabel, historyDate } from "./detection.js";
 import { filtered } from "./search.js";
 import { isFiltered } from "./url.js";
 
@@ -42,7 +42,7 @@ export function renderResults(justOpened = new Set()) {
 
   el.resultsLabel.textContent = matches.length
     ? `${num(matches.length)} courses ${DOT} ${num(sectionCount)} sections ${DOT} ${
-        state.seenBaseline ? `${num(openCount)} open${state.historyStatus === "stale" ? " at last check" : " now"}` : "seat status pending"}`
+        state.seenBaseline ? `${num(openCount)} open${state.liveStatus === "stale" ? " at last check" : " now"}` : "seat status pending"}`
     : "Nothing matches those filters.";
 
   el.reset.hidden = !isFiltered();
@@ -129,23 +129,14 @@ export function renderDetail(section, course) {
     )}">copy</button>`,
   ]);
   rows.push(["Section", `${esc(section.number)} of ${esc(course.code)}`]);
-  rows.push(["Last opened", esc(openingLabel(section.index, true))]);
+  rows.push(["Last seen open", esc(openingLabel(section.index, true))]);
   const record = openingInfo(section.index);
   if (record && !record.local) {
-    rows.push(["Recorded openings", esc(record.openingCount)]);
-    if (record.lastClosedAt) rows.push(["Last closed", esc(historyDate(record.lastClosedAt))]);
-    if (record.averageOpenSeconds != null) {
-      rows.push(["Average time open", `About ${esc(durationLabel(record.averageOpenSeconds))} across ${
-        esc(record.completedOpenings)} fully observed opening${record.completedOpenings === 1 ? "" : "s"}`]);
-    }
+    rows.push(["Observed days", `${esc(record.daysSeenOpen)} recorded day${record.daysSeenOpen === 1 ? "" : "s"} with an open seat`]);
   }
-  if (record?.observedAfter) {
-    rows.push(["Observation", "Times and durations are approximate observations between checks. Duration averages exclude collection gaps."]);
-  }
+  rows.push(["Daily history", "One snapshot per day, dated in Eastern time. This is a last-seen date, not an exact opening time."]);
   if (state.history?.startedAt) {
-    rows.push(["Tracking since", esc(new Date(state.history.startedAt).toLocaleString("en-US", {
-      timeZone: "America/New_York", timeZoneName: "short",
-    }))]);
+    rows.push(["Last daily check", esc(historyDate(state.history.sampleDate))]);
   }
   if (section.subtitle) rows.push(["Topic", esc(section.subtitle)]);
   rows.push([

@@ -1,3 +1,3 @@
-import { snapshotProxy } from "../../../lib/snapshot-proxy.js";
+import { historyProxy } from "../../../lib/history-proxy.js";
 
-export const onRequestGet = ({ request, env }) => snapshotProxy(request, env.HISTORY_API_BASE);
+export const onRequestGet = ({ request, env }) => historyProxy(request, env.HISTORY_REPOSITORY);

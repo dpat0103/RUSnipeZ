@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RU SnipeZ — live Rutgers section monitor</title>
-<meta name="description" content="Live Rutgers seat alerts and opening history. Search 16,000+ sections and see when a section last opened, with observations collected across visits.">
+<meta name="description" content="Live Rutgers seat alerts and daily history. Search 16,000+ sections and see the last date a section was observed open.">
 <link rel="icon" href="logo.png">
-<!-- Where the prepared snapshot endpoint lives. Empty means same origin on
+<!-- Where the live-status and daily-history endpoints live. Empty means same origin on
      Vercel or Cloudflare Pages, where /api runs as an edge function. On a purely
      static host such as GitHub Pages, set this to your deployed Worker origin,
      for example https://ru-snipez-api.<subdomain>.workers.dev -->
@@ -24,7 +24,7 @@
       <img src="logo.png" alt="">
       <div>
         <h1>RU SnipeZ</h1>
-        <span class="sub" id="term-label">Fall 2026 · New Brunswick</span>
+        <span class="sub" id="term-label">Winter 2027 · New Brunswick</span>
       </div>
     </div>
 
@@ -60,7 +60,7 @@
 
   <div class="intro" id="intro">
     <div class="intro-text">
-      <strong>Know when a seat opens—and when it last opened.</strong> Find a class, check its opening history, and press <em>Watch</em> for an alert with a WebReg link ready to go.
+      <strong>Live seat alerts, with a little history.</strong> See the last date a section was observed open, then press <em>Watch</em> for live alerts while this tab is open.
     </div>
     <button class="linkbtn" id="intro-close" aria-label="Dismiss">✕</button>
   </div>
@@ -283,7 +283,7 @@
       <div class="decision">
         <h3>Every stored record is keyed to a term</h3>
         <p>Rutgers reuses index numbers between terms. 3,059 of the index numbers valid in one recent term are also valid in another, attached to entirely different courses. An index alone is not a stable identifier for anything.</p>
-        <p>So the composite key is <code>(term, campus, index)</code> everywhere state is written. Historical records stay interpretable across a rollover, and a query can never silently return a row that describes a different class than the one it was written for.</p>
+        <p>History is keyed by term and index, campus membership comes from the catalog, and browser watchlists are stored separately for each term. Historical records stay interpretable across a rollover, and a query can never silently return a row that describes a different class than the one it was written for.</p>
       </div>
 
       <div class="decision">
@@ -345,9 +345,9 @@
     <h2>Get the class, without living in WebReg</h2>
     <p class="lede-big">Rutgers course registration rewards whoever happens to be watching. Sections fill instantly, most have no waitlist, and a seat that frees up at 3&nbsp;a.m. goes to whoever refreshed at 3:01.</p>
     <p>RU SnipeZ watches for you. Pick the sections you need, and the moment a seat opens you get an alert with a WebReg link that already has the index filled in. No refreshing, no typing a five digit number while the seat disappears.</p>
-    <h2>See when it last opened</h2>
-    <p>Each section shows its last observed opening, even after the seat closes. Shared history is collected in the background across visits, so you can check whether a section has recently had openings without keeping a tab open. Expand a section to see its opening count, last closure, average observed time open, and when tracking began.</p>
-    <p>Rutgers does not provide past opening times. This history starts when RU SnipeZ begins tracking a term and records closed-to-open changes between checks, with timestamps in Eastern time. A section already open on the first check has no known opening time. Missing history means no opening was recorded, not that the section never opened; outages can leave gaps.</p>
+    <h2>See when it was last seen open</h2>
+    <p>One daily snapshot records which sections have an open seat, whether or not anyone is visiting the site. Each section shows its last observed open date in Eastern time; the date stays visible after the seat closes. Expand a section to see the number of recorded days it was seen open and the last daily check.</p>
+    <p>This is daily sampled history, not an opening timestamp. Brief openings between snapshots can be missed. Missing history does not mean a section never opened. Live seat checks remain separate and run every 30 seconds while the tab is open; observations from your current visit are labeled accordingly.</p>
   </section>
 
   <section>
@@ -421,6 +421,6 @@
   <a href="https://github.com/dpat0103" rel="noopener">Source</a>
 </footer>
 
-<script type="module" src="js/main.js?v=modules1"></script>
+<script type="module" src="js/main.js?v=daily-history3"></script>
 </body>
 </html>

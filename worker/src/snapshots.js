@@ -11,7 +11,7 @@ export async function readSnapshot(request, env, ctx) {
   if (!/^[0179]\d{4}$/.test(term) || !["NB", "NK", "CM"].includes(campus)) {
     return fail(400, "Invalid term or campus");
   }
-  if (!(env.HISTORY_TERMS ?? "92026").split(",").map((s) => s.trim()).includes(term)) {
+  if (!(env.SNAPSHOT_TERMS ?? env.HISTORY_TERMS ?? "92026").split(",").map((s) => s.trim()).includes(term)) {
     return fail(404, "This term is not being collected");
   }
   if (!env.SNAPSHOTS) return fail(503, "Snapshot storage is not configured");

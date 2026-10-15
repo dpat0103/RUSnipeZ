@@ -6,7 +6,10 @@ compatibility_date = "2025-01-01"
 # Tighten this to your deployed frontend before going public.
 [vars]
 ALLOWED_ORIGINS = "*"
-HISTORY_TERMS = "92026"
+# Retired continuous collector. Existing alarms stop on their next invocation.
+HISTORY_TERMS = ""
+# Keep existing snapshots readable during the website migration.
+SNAPSHOT_TERMS = "92026"
 
 [[r2_buckets]]
 binding = "SNAPSHOTS"
@@ -21,4 +24,4 @@ tag = "v1-seat-history"
 new_sqlite_classes = ["SeatHistory"]
 
 [triggers]
-crons = ["* * * * *"]
+crons = []

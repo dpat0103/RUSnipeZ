@@ -1,5 +1,5 @@
-export const TERM = "92026";
-export const TERM_NAME = "Fall 2026";
+export const TERM = "02027";
+export const TERM_NAME = "Winter 2027";
 export const CAMPUS_NAMES = { NB: "New Brunswick", NK: "Newark", CM: "Camden" };
 
 // The endpoint declares Cache-Control: max-age=30, so a faster cycle cannot
@@ -8,7 +8,7 @@ export const POLL_SECONDS = 30;
 export const PAGE_SIZE = 40;
 export const MAX_EVENTS = 60;
 export const WEBREG = `https://sims.rutgers.edu/webreg/editSchedule.htm?login=cas&semesterSelection=${TERM}&indexList=`;
-export const STORAGE_KEY = "rusnipez.watch.v1";
+export const STORAGE_KEY = `rusnipez.watch.v2.${TERM}`;
 
 export const INTRO_KEY = "rusnipez.intro.dismissed.v1";
 
