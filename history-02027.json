@@ -1,494 +1,494 @@
 {
-  "checkedAt": "2026-10-17T16:39:32.227600+00:00",
-  "sampleDate": "2026-10-17",
-  "sampleDays": 3,
+  "checkedAt": "2026-10-18T16:56:42.243307+00:00",
+  "sampleDate": "2026-10-18",
+  "sampleDays": 4,
   "sampling": "daily",
   "schemaVersion": 3,
   "sections": {
     "00001": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00002": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00003": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00005": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00006": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00007": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00008": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00009": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00010": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00012": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00013": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00014": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00015": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00016": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00017": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00018": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00019": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00020": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00021": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00022": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00023": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00024": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00025": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00026": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00032": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00033": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00037": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00038": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00041": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00042": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00044": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00048": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00049": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00050": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00051": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00052": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00053": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00054": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00064": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00066": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00068": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00069": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00070": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00071": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00157": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00158": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00173": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00174": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00187": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00188": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00190": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00192": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00193": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00248": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00263": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00264": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00272": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00274": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00298": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00322": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00360": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00380": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00592": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00603": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00607": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00614": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00615": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00621": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00622": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00648": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00820": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00835": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00837": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00838": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00839": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00841": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00844": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00848": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00849": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00851": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00946": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00947": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00951": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00954": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00955": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00956": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00957": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00958": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00959": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00960": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00968": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00969": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00984": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00985": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "00997": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01001": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01007": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01008": {
       "daysSeenOpen": 1,
@@ -496,494 +496,494 @@
       "lastSeenOpen": "2026-10-15"
     },
     "01013": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01016": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01171": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01172": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01173": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01177": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01183": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01188": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01190": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01198": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01207": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01208": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01209": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01214": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "01216": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05812": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05906": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05918": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05919": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05920": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05924": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05925": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05926": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05932": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05933": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05939": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "05941": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06023": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06024": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06032": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06033": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06036": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06050": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06051": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06172": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06176": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06269": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06283": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06344": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06352": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06355": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06361": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06376": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06377": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06378": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06380": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06385": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06388": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06389": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06392": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06401": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06409": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06411": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06414": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06415": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06416": {
-      "daysSeenOpen": 2,
+      "daysSeenOpen": 3,
       "firstSeenOpen": "2026-10-16",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06417": {
-      "daysSeenOpen": 2,
+      "daysSeenOpen": 3,
       "firstSeenOpen": "2026-10-16",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06420": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06431": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06432": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "06438": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "07970": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "07982": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "09619": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "10591": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11073": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11485": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11499": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11514": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11523": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11524": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11525": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11526": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11527": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11528": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11529": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11530": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11531": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11532": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11533": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11534": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11535": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11537": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11538": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11539": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11540": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11541": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11542": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11543": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11560": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11561": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11563": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11564": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11569": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11571": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11574": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11577": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11578": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11579": {
       "daysSeenOpen": 1,
@@ -991,99 +991,99 @@
       "lastSeenOpen": "2026-10-15"
     },
     "11580": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11581": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11582": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11600": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11601": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11613": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11614": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11619": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11620": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11623": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11625": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11626": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11628": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11635": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11636": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11642": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11644": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11645": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     },
     "11653": {
-      "daysSeenOpen": 3,
+      "daysSeenOpen": 4,
       "firstSeenOpen": "2026-10-15",
-      "lastSeenOpen": "2026-10-17"
+      "lastSeenOpen": "2026-10-18"
     }
   },
   "startedAt": "2026-10-15T14:29:08.360680+00:00",
