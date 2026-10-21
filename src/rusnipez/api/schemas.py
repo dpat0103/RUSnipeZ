@@ -85,6 +85,7 @@ class SectionHistory(Model):
     course_code: str | None
     course_title: str | None
     section_number: str | None
+    instructors: str | None
     campus: str | None
     open_now: bool
     open_since: datetime | None

@@ -3,17 +3,22 @@ import { useSection } from "../api/hooks";
 import type { CatalogCourse, CatalogSection } from "../api/types";
 import { LOCATION_NAMES, webregUrl } from "../lib/config";
 import { clock, dateTime, duration, plainText } from "../lib/format";
+import { useDemo } from "../demo/context";
+import { watchFrom } from "../demo/model";
+import { useTerm } from "../lib/hooks";
 import { HourChart } from "./HourChart";
 
 interface Props {
   term: string;
   course: CatalogCourse;
   section: CatalogSection;
-  onPreview: () => void;
 }
 
-export function SectionDetail({ term, course, section, onPreview }: Props) {
+export function SectionDetail({ term, course, section }: Props) {
   const history = useSection(term, section.index);
+  const demo = useDemo();
+  const { info } = useTerm();
+  const watching = demo.isWatched(section.index);
   const h = history.data;
   const rows: [string, ReactNode][] = [];
 
@@ -78,8 +83,14 @@ export function SectionDetail({ term, course, section, onPreview }: Props) {
         seat that opens and fills between two checks is not seen.
       </p>
       <div className="detail-actions">
-        <button className="button button-primary" onClick={onPreview}>
-          Get alerts for this section
+        <button
+          className="button button-primary"
+          onClick={() => demo.snipe(watchFrom(term, info?.name ?? term, course, section))}
+        >
+          {watching ? "Watching · run /snipe again" : "Snipe this section"}
+        </button>
+        <button className="button" onClick={() => void demo.course(course.code)}>
+          /course {course.code}
         </button>
         <a className="button" href={webregUrl(term, section.index)} target="_blank" rel="noreferrer">
           Open in WebReg

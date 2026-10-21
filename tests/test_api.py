@@ -113,6 +113,7 @@ async def test_section_history_for_observed_openings(api, sessions) -> None:
     await seed(sessions)
     body = (await api.get("/api/v1/terms/12027/sections/10002")).json()
     assert body["courseCode"] == "01:198:111"
+    assert body["instructors"] == "DOE, JANE"
     assert body["openNow"] is False
     assert body["openSince"] is None
     assert body["lastOpenedAt"] == "2026-11-16T14:00:30Z"

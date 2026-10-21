@@ -1,10 +1,10 @@
 import { useDeferredValue, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useCatalog, useHistory, useOpenSections } from "../api/hooks";
-import type { Campus, CatalogCourse, CatalogSection } from "../api/types";
-import { AlertPreview } from "../components/AlertPreview";
+import type { Campus } from "../api/types";
 import { CourseCard } from "../components/CourseCard";
 import { Pagination } from "../components/Pagination";
+import { DiscordPanel } from "../demo/DiscordPanel";
 import { CAMPUSES, CAMPUS_NAMES, DAYS } from "../lib/config";
 import { formatCount, plural } from "../lib/format";
 import { useNow, useTerm } from "../lib/hooks";
@@ -47,7 +47,6 @@ export function SearchPage() {
 
   const [toggledCourses, setToggledCourses] = useState<Set<string>>(new Set());
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const [preview, setPreview] = useState<{ course: CatalogCourse; section: CatalogSection } | null>(null);
   const resultsTop = useRef<HTMLParagraphElement>(null);
 
   const prepared = useMemo(() => (catalog.data ? prepareCourses(catalog.data.courses) : []), [catalog.data]);
@@ -120,6 +119,8 @@ export function SearchPage() {
         </p>
       </section>
 
+      <div className="search-layout">
+      <div className="search-main">
       <div className="filters" role="search">
         <label className="search-box">
           <span className="visually-hidden">Search</span>
@@ -252,7 +253,6 @@ export function SearchPage() {
                   highlight={exactIndex}
                   expandedSection={expandedSection}
                   onToggleSection={(index) => setExpandedSection((current) => (current === index ? null : index))}
-                  onPreview={(c, s) => setPreview({ course: c, section: s })}
                 />
               );
             })}
@@ -261,16 +261,10 @@ export function SearchPage() {
           <Pagination page={page} pages={pages} onPage={goToPage} />
         </>
       )}
+      </div>
+      <DiscordPanel />
+      </div>
 
-      {preview && term && (
-        <AlertPreview
-          term={term}
-          termName={info?.name ?? term}
-          course={preview.course}
-          section={preview.section}
-          onClose={() => setPreview(null)}
-        />
-      )}
     </>
   );
 }

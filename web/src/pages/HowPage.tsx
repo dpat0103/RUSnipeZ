@@ -90,6 +90,11 @@ function Overview() {
           <strong>Search:</strong> any course or section, whether it is open right now, and its
           history.
         </li>
+        <li>
+          <strong>Discord preview:</strong> next to the search results, try the bot itself. Snipe
+          sections, run commands like /check and /lastopen, and see the alert you would get. It
+          resets when you close the tab.
+        </li>
       </ul>
       <p>Alerts themselves happen on Discord, which students already have on their phones.</p>
 
@@ -300,6 +305,16 @@ React website  --  GET /api/v1/*  -->  FastAPI`}</pre>
         &quot;organic chemistry&quot;, 40) or sits inside one (&quot;biochemistry&quot;, 22).
         Running it client-side means no server round trip per keystroke and no search
         infrastructure to host.
+      </p>
+
+      <h2>Discord preview</h2>
+      <p>
+        The panel beside the search results runs the bot&apos;s planned commands against live data,
+        in the browser. State is a reducer over watches and messages, saved to sessionStorage so it
+        survives a reload and disappears when the tab closes. Replies are stored as data, not
+        markup, and rendered as Discord embeds. While the tab is open, each watched term&apos;s
+        open set is polled with the same cached query the pages use; a watched section going from
+        closed to open produces the same direct message the bot will send.
       </p>
 
       <h2>API</h2>

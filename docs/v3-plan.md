@@ -57,7 +57,9 @@ API, all under `/api`, documented at `/api/docs`:
 
 Website pages: **Live** (stats, live feed, Discord call to action), **Search** (collapsible
 course summaries, 20 per page, sort, filters in the URL, section history, Discord alert
-preview), **How it works** (Overview and Engineering tabs).
+preview), **How it works** (Overview and Engineering tabs). A **Discord preview** panel beside
+the search results runs every planned bot command against live data and keeps a snipe list
+(15 max) for the browser session only, so visitors can see the bot before it ships.
 
 Search runs in the browser over the downloaded catalog: tokenize, expand Rutgers
 abbreviations, score each term by field, keep courses matching every term when any exist,

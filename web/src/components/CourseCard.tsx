@@ -1,5 +1,6 @@
 import type { CatalogCourse, CatalogSection, HistorySummary } from "../api/types";
 import { meetingLabels, meetingPlaces, nameCase, plural, timeAgo } from "../lib/format";
+import { useDemo } from "../demo/context";
 import { SectionDetail } from "./SectionDetail";
 
 interface Props {
@@ -14,7 +15,6 @@ interface Props {
   highlight: string | null;
   expandedSection: string | null;
   onToggleSection: (index: string) => void;
-  onPreview: (course: CatalogCourse, section: CatalogSection) => void;
 }
 
 export function CourseCard(props: Props) {
@@ -68,9 +68,9 @@ function SectionItem({
   highlight,
   expandedSection,
   onToggleSection,
-  onPreview,
 }: Props & { section: CatalogSection; seenAt: string | undefined }) {
   const isOpen = open?.has(section.index);
+  const watching = useDemo().isWatched(section.index);
   const isExpanded = expandedSection === section.index;
   const status = open ? (isOpen ? "open" : "closed") : "unknown";
   const places = meetingPlaces(section.meets);
@@ -102,6 +102,7 @@ function SectionItem({
           {isOpen ? "Open now" : seenAt ? `Seen open ${timeAgo(seenAt, now)}` : "Not seen open"}
         </span>
         <span className="badges">
+          {watching && <span className="badge badge-watch">Watching</span>}
           {section.spn && (
             <span className="badge badge-spn" title="Needs a special permission number">
               SPN
@@ -116,7 +117,7 @@ function SectionItem({
         <span className="chevron" aria-hidden="true" />
       </button>
       {isExpanded && (
-        <SectionDetail term={term} course={course} section={section} onPreview={() => onPreview(course, section)} />
+        <SectionDetail term={term} course={course} section={section} />
       )}
     </li>
   );

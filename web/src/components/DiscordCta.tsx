@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import { DISCORD_INVITE } from "../lib/config";
 
 export function DiscordCta({ compact = false }: { compact?: boolean }) {
@@ -10,15 +11,20 @@ export function DiscordCta({ compact = false }: { compact?: boolean }) {
           a seat opens, with a WebReg link that has the index filled in. Free for Rutgers students.
         </p>
       </div>
-      {DISCORD_INVITE ? (
-        <a className="button button-primary" href={DISCORD_INVITE}>
-          Join the Discord
-        </a>
-      ) : (
-        <span className="button button-muted" aria-disabled="true">
-          Discord invite coming soon
-        </span>
-      )}
+      <div className="cta-actions">
+        <Link className="button" to="/search">
+          Try the Discord preview
+        </Link>
+        {DISCORD_INVITE ? (
+          <a className="button button-primary" href={DISCORD_INVITE}>
+            Join the Discord
+          </a>
+        ) : (
+          <span className="button button-muted" aria-disabled="true">
+            Discord invite coming soon
+          </span>
+        )}
+      </div>
     </section>
   );
 }

@@ -94,6 +94,7 @@ const section: SectionHistory = {
   courseCode: "01:198:121",
   courseTitle: "INTRODUCTION TO COMPUTER SCIENCE",
   sectionNumber: "42",
+  instructors: "AMIEL, DAVID",
   campus: "NB",
   openNow: false,
   openSince: null,
@@ -107,20 +108,21 @@ const section: SectionHistory = {
 };
 
 let catalogBody: Catalog = catalog;
+let openBody: OpenSections = open;
 
 const ROUTES: [RegExp, () => unknown][] = [
   [/\/api\/v1\/meta$/, () => meta],
   [/\/api\/v1\/stats$/, () => stats],
   [/\/api\/v1\/terms\/12027\/events/, () => events],
-  [/\/api\/v1\/terms\/12027\/open$/, () => open],
+  [/\/api\/v1\/terms\/12027\/open$/, () => openBody],
   [/\/api\/v1\/terms\/12027\/history$/, () => history],
   [/\/api\/v1\/terms\/12027\/sections\/25628$/, () => section],
   [/\/api\/v1\/terms\/12027\/catalogs\/NB$/, () => catalogBody],
 ];
 
-function renderAt(path: string) {
+function renderAt(path: string, client = createQueryClient()) {
   return render(
-    <QueryClientProvider client={createQueryClient()}>
+    <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <AppRoutes />
       </MemoryRouter>
@@ -130,6 +132,8 @@ function renderAt(path: string) {
 
 beforeEach(() => {
   catalogBody = catalog;
+  openBody = open;
+  sessionStorage.clear();
   vi.useFakeTimers({ toFake: ["Date"], now: Date.parse(NOW) });
   vi.stubGlobal(
     "fetch",
@@ -140,14 +144,6 @@ beforeEach(() => {
         : new Response(JSON.stringify({ detail: "Not found" }), { status: 404 });
     }),
   );
-  // jsdom has no <dialog> behavior.
-  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
-    this.open = true;
-  };
-  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
-    this.open = false;
-    this.dispatchEvent(new Event("close"));
-  };
 });
 
 afterEach(() => {
@@ -182,7 +178,7 @@ describe("search page", () => {
     expect(within(second!).getByText("Seen open 1h ago")).toBeInTheDocument();
   });
 
-  it("expands a section into its history and previews the Discord alert", async () => {
+  it("expands a section into its history", async () => {
     const user = userEvent.setup();
     renderAt("/search");
     await user.click(await screen.findByRole("button", { name: /Sec 42/ }));
@@ -195,12 +191,6 @@ describe("search page", () => {
       expect.stringContaining("indexList=25628"),
     );
 
-    await user.click(screen.getByRole("button", { name: "Get alerts for this section" }));
-    const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText("INTRODUCTION TO COMPUTER SCIENCE is open")).toBeInTheDocument();
-    expect(within(dialog).getByText("/snipe 25628")).toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: "Close" }));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("applies filters from the URL", async () => {
@@ -256,6 +246,124 @@ describe("search results", () => {
     const course = await screen.findByRole("button", { name: /COURSE 12\b/ });
     expect(course).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("30121").closest("li")).toHaveAttribute("data-highlight", "true");
+  });
+});
+
+describe("discord preview", () => {
+  const panel = () => screen.getByRole("complementary", { name: "Discord preview" });
+  const thread = () => within(panel()).getByRole("list", { name: "Conversation with RU SnipeZ" });
+  const snipeList = () => within(panel()).getByRole("region", { name: "Snipe list" });
+
+  async function command(user: ReturnType<typeof userEvent.setup>, text: string) {
+    await user.type(within(panel()).getByRole("textbox", { name: "Command" }), `${text}{Enter}`);
+  }
+
+  it("snipes a section from the search results", async () => {
+    const user = userEvent.setup();
+    renderAt("/search");
+    await user.click(await screen.findByRole("button", { name: /Sec 42/ }));
+    await user.click(screen.getByRole("button", { name: "Snipe this section" }));
+
+    expect(within(thread()).getByText("/snipe 25628")).toBeInTheDocument();
+    expect(within(thread()).getByText("Now watching INTRODUCTION TO COMPUTER SCIENCE")).toBeInTheDocument();
+    expect(within(thread()).getByText(/You will get a DM the moment it opens · 1\/15 watches/)).toBeInTheDocument();
+    expect(within(snipeList()).getByText("Sec 42 · 25628 · Closed")).toBeInTheDocument();
+    expect(within(screen.getByRole("button", { name: /Sec 42/ })).getByText("Watching")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Watching · run /snipe again" }));
+    expect(within(thread()).getByText("You are already watching 25628.")).toBeInTheDocument();
+  });
+
+  it("answers every typed command", async () => {
+    const user = userEvent.setup();
+    renderAt("/search");
+    await screen.findByText("1 course · 2 sections · 1 open");
+
+    await command(user, "/snipe 25627");
+    expect(await within(thread()).findByText("INTRODUCTION TO COMPUTER SCIENCE is open right now")).toBeInTheDocument();
+    expect(within(thread()).getByRole("link", { name: "Register" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("indexList=25627"),
+    );
+
+    await command(user, "/check");
+    expect(await within(thread()).findByText("Your snipe list (1/15)")).toBeInTheDocument();
+
+    await command(user, "/lastopen 25628");
+    expect(await within(thread()).findByText("6 min")).toBeInTheDocument();
+
+    await command(user, "/course 01:198:121");
+    expect(await within(thread()).findByText("Spring 2027 · NB · 1 of 2 open")).toBeInTheDocument();
+
+    await command(user, "/status");
+    expect(await within(thread()).findByText("RU SnipeZ is checking Rutgers every 30 seconds")).toBeInTheDocument();
+
+    await command(user, "/help");
+    expect(within(thread()).getByText("RU SnipeZ commands")).toBeInTheDocument();
+
+    await command(user, "/remove 25627");
+    expect(within(thread()).getByText("Stopped watching 25627")).toBeInTheDocument();
+    expect(within(snipeList()).getByText(/Open a section and choose Snipe/)).toBeInTheDocument();
+
+    await command(user, "/snipe 99999");
+    expect(await within(thread()).findByText("Could not find index 99999 in Spring 2027.")).toBeInTheDocument();
+
+    await command(user, "/frobnicate");
+    expect(within(thread()).getByText("Unknown command /frobnicate. Try /help.")).toBeInTheDocument();
+  });
+
+  it("asks before clearing the list", async () => {
+    const user = userEvent.setup();
+    renderAt("/search");
+    await screen.findByText("1 course · 2 sections · 1 open");
+    await command(user, "/snipe 25627");
+    await command(user, "/snipe 25628");
+    expect(await within(snipeList()).findByText("2/15")).toBeInTheDocument();
+    await user.click(within(panel()).getByRole("button", { name: "/clear" }));
+    expect(await within(thread()).findByText("Stop watching all 2 sections?")).toBeInTheDocument();
+    await user.click(within(thread()).getByRole("button", { name: "Clear all" }));
+    expect(within(thread()).getByText("Cleared 2 sections.")).toBeInTheDocument();
+    expect(within(snipeList()).getByText("0/15")).toBeInTheDocument();
+  });
+
+  it("sends the alert DM when a watched section opens, and its buttons work", async () => {
+    const user = userEvent.setup();
+    const client = createQueryClient();
+    renderAt("/search", client);
+    await screen.findByText("1 course · 2 sections · 1 open");
+    await command(user, "/snipe 25628");
+    expect(await within(snipeList()).findByText("Sec 42 · 25628 · Closed")).toBeInTheDocument();
+
+    openBody = { ...open, indexes: ["25627", "25628"] };
+    await client.invalidateQueries({ queryKey: ["open"] });
+    expect(await within(thread()).findByText("Direct message")).toBeInTheDocument();
+    expect(within(thread()).getByText("INTRODUCTION TO COMPUTER SCIENCE is open")).toBeInTheDocument();
+
+    await user.click(within(thread()).getByRole("button", { name: "I got in" }));
+    expect(
+      within(thread()).getByText("Nice. Removed it and its cross-listed sections from your list."),
+    ).toBeInTheDocument();
+    expect(within(thread()).getByRole("button", { name: "Snooze 1h" })).toBeDisabled();
+    expect(within(snipeList()).getByText("0/15")).toBeInTheDocument();
+  });
+
+  it("keeps the list across a reload of the same tab", async () => {
+    const user = userEvent.setup();
+    const first = renderAt("/search");
+    await screen.findByText("1 course · 2 sections · 1 open");
+    await command(user, "/snipe 25627");
+    expect(await within(snipeList()).findByText("Sec 41 · 25627 · Open")).toBeInTheDocument();
+    first.unmount();
+
+    const second = renderAt("/search");
+    expect(await within(snipeList()).findByText("Sec 41 · 25627 · Open")).toBeInTheDocument();
+    expect(within(thread()).getByText("/snipe 25627")).toBeInTheDocument();
+    second.unmount();
+
+    // Closing the tab clears sessionStorage; a new visit starts empty.
+    sessionStorage.clear();
+    renderAt("/search");
+    expect(await within(snipeList()).findByText("0/15")).toBeInTheDocument();
   });
 });
 

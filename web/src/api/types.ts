@@ -74,6 +74,7 @@ export interface SectionHistory {
   courseCode: string | null;
   courseTitle: string | null;
   sectionNumber: string | null;
+  instructors: string | null;
   campus: Campus | null;
   openNow: boolean;
   openSince: string | null;

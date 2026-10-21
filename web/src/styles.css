@@ -656,6 +656,12 @@ a.index:hover {
   margin-top: 16px;
 }
 
+.cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* --------------------------------------------------------------- filters */
 
 .filters {
@@ -1111,132 +1117,544 @@ a.index:hover {
   margin-top: 4px;
 }
 
-/* ----------------------------------------------------------------- dialog */
+/* ------------------------------------------------------- search layout */
 
-.dialog {
-  width: min(520px, calc(100vw - 2 * var(--gutter)));
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text);
+.main:has(.search-layout) {
+  max-width: 1360px;
 }
 
-.dialog::backdrop {
-  background: rgb(0 0 0 / 50%);
+.search-layout {
+  display: grid;
+  gap: 24px;
+  align-items: start;
 }
 
-.dialog-body {
-  padding: 20px;
+.search-main {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
-.dialog-body p {
-  margin: 0;
-  color: var(--text-2);
+@media (min-width: 1100px) {
+  .search-layout {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
 }
 
-.dialog-head {
+.badge-watch {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ------------------------------------------------------- discord preview */
+
+/* Discord's own palette, so the preview reads as Discord in both themes. */
+.demo {
+  --dc-bg: #313338;
+  --dc-panel: #2b2d31;
+  --dc-deep: #1e1f22;
+  --dc-text: #dbdee1;
+  --dc-strong: #f2f3f5;
+  --dc-muted: #949ba4;
+  --dc-blurple: #5865f2;
+
+  display: flex;
+  flex-direction: column;
+  background: var(--dc-bg);
+  color: var(--dc-text);
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-family: "gg sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+}
+
+@media (min-width: 1100px) {
+  .demo {
+    position: sticky;
+    top: 76px;
+    height: calc(100vh - 100px);
+  }
+
+  .demo-fab,
+  .demo-close {
+    display: none;
+  }
+}
+
+@media (max-width: 1099px) {
+  .demo {
+    position: fixed;
+    inset: 56px 0 0;
+    z-index: 30;
+    border-radius: var(--radius) var(--radius) 0 0;
+    box-shadow: 0 -8px 32px rgb(0 0 0 / 35%);
+    transform: translateY(100%);
+    visibility: hidden;
+    transition:
+      transform 0.2s ease-out,
+      visibility 0.2s;
+  }
+
+  .demo[data-open] {
+    transform: none;
+    visibility: visible;
+  }
+}
+
+.demo-fab {
+  position: fixed;
+  right: var(--gutter);
+  bottom: var(--gutter);
+  z-index: 20;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #5865f2;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 30%);
+  cursor: pointer;
+}
+
+.demo-head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+  padding: 14px 16px 12px;
+  background: var(--dc-panel);
+  border-bottom: 1px solid var(--dc-deep);
 }
 
-.dialog-head h2 {
-  font-size: 20px;
+.demo-head h2 {
+  font: 700 16px var(--font-display);
+  color: var(--dc-strong);
 }
 
-/* A faithful Discord message, so it keeps Discord's own colors in both themes. */
-.discord {
-  display: flex;
-  gap: 14px;
-  padding: 16px;
-  border-radius: var(--radius-sm);
-  background: #313338;
-  color: #dbdee1;
-  font-family: "gg sans", "Segoe UI", system-ui, sans-serif;
+.demo-head p {
+  margin: 2px 0 0;
+  color: var(--dc-muted);
+  font-size: 12px;
 }
 
-.discord-avatar {
-  border-radius: 50%;
+.demo-close {
+  color: var(--dc-muted);
+}
+
+.demo-list {
+  padding: 10px 12px;
+  background: var(--dc-panel);
+  border-bottom: 1px solid var(--dc-deep);
+  max-height: 34%;
+  overflow-y: auto;
   flex: none;
 }
 
-.discord-message {
-  min-width: 0;
+.demo-list-head {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 4px 6px;
+  color: var(--dc-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.discord-author {
-  color: #f2f3f5;
+.demo-list-head h3 {
+  font: inherit;
+  margin: 0;
+}
+
+.demo-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.demo-empty {
+  margin: 0;
+  padding: 4px;
+  color: var(--dc-muted);
+  font-size: 13px;
+}
+
+.demo-watch {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-radius: 4px;
+}
+
+.demo-watch:hover {
+  background: rgb(255 255 255 / 4%);
+}
+
+.demo-watch-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.demo-watch-name strong {
+  color: var(--dc-strong);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.demo-watch-name span {
+  color: var(--dc-muted);
+  font-size: 12px;
+}
+
+.demo-watch-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.demo-watch-actions button {
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--dc-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.demo-watch-actions button:hover {
+  background: rgb(255 255 255 / 8%);
+  color: var(--dc-strong);
+}
+
+.dc-dot {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dc-muted);
+}
+
+.dc-dot[data-open="true"] {
+  background: #23a55a;
+}
+
+.dc-dot[data-open="false"] {
+  background: #80848e;
+  box-shadow: inset 0 0 0 3px var(--dc-bg);
+}
+
+.dc-thread {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+  flex: 1;
+  min-height: 160px;
+  overflow-y: auto;
+}
+
+.dc-welcome {
+  margin: 8px 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--dc-panel);
+  color: var(--dc-muted);
+}
+
+.dc-welcome strong {
+  color: var(--dc-strong);
+}
+
+.dc-message {
+  padding: 6px 16px;
+}
+
+.dc-message:hover {
+  background: rgb(0 0 0 / 6%);
+}
+
+.dc-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  color: #f23f43;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dc-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #f23f43;
+}
+
+.dc-reply {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 2px 18px;
+  color: var(--dc-muted);
+  font-size: 12px;
+}
+
+.dc-reply-line {
+  width: 26px;
+  height: 10px;
+  margin-top: 6px;
+  border-left: 2px solid #4e5058;
+  border-top: 2px solid #4e5058;
+  border-top-left-radius: 6px;
+}
+
+.dc-reply strong {
+  color: var(--dc-strong);
+}
+
+.demo code {
+  background: var(--dc-deep);
+  color: var(--dc-text);
+}
+
+.dc-row {
+  display: flex;
+  gap: 12px;
+}
+
+.dc-avatar {
+  flex: none;
+  border-radius: 50%;
+}
+
+.dc-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dc-author {
+  color: var(--dc-strong);
   font-weight: 600;
 }
 
-.discord-app {
+.dc-author time {
+  margin-left: 8px;
+  color: var(--dc-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.dc-app {
   margin-left: 4px;
   padding: 0 4px;
   border-radius: 3px;
-  background: #5865f2;
+  background: var(--dc-blurple);
   color: #fff;
   font-size: 10px;
-  vertical-align: 2px;
+  vertical-align: 1px;
 }
 
-.discord-embed {
-  padding: 10px 14px 12px;
-  border-left: 4px solid #23a55a;
+.embed {
+  max-width: 440px;
+  padding: 8px 12px 10px;
+  border-left: 4px solid;
   border-radius: 4px;
-  background: #2b2d31;
-  font-size: 14px;
+  background: var(--dc-panel);
 }
 
-.discord-title {
+.embed p {
+  margin: 4px 0 0;
+}
+
+.embed-title {
   display: block;
-  color: #f2f3f5;
-  margin-bottom: 8px;
+  color: var(--dc-strong);
 }
 
-.discord-embed dl {
-  margin: 0;
+.embed-fields {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 2px 12px;
+  gap: 4px;
+  margin: 6px 0 0;
 }
 
-.discord-embed dt {
-  color: #f2f3f5;
+.embed-fields div {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 8px;
+}
+
+.embed-fields dt {
+  color: var(--dc-strong);
+  font-size: 13px;
   font-weight: 600;
 }
 
-.discord-embed dd {
+.embed-fields dd {
   margin: 0;
+  font-size: 13px;
 }
 
-.discord-footer {
+.embed-fields .hours {
+  max-width: 220px;
+}
+
+.embed-fields .hours-axis {
+  color: var(--dc-muted);
+}
+
+.embed-footer {
   display: block;
   margin-top: 8px;
+  color: var(--dc-muted);
   font-size: 12px;
-  color: #b5bac1;
 }
 
-.discord-button {
-  align-self: flex-start;
-  padding: 6px 16px;
+.dc-list {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.dc-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.dc-help {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+.dc-help dd {
+  margin: 0;
+  color: var(--dc-muted);
+}
+
+.dc-muted {
+  margin: 0;
+  color: var(--dc-muted);
+  font-size: 12px;
+}
+
+.dc-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dc-button {
+  padding: 5px 14px;
+  border: 0;
   border-radius: 4px;
   background: #4e5058;
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   text-decoration: none;
+  cursor: pointer;
 }
 
-.discord-button:hover {
+.dc-button:hover:not(:disabled) {
   background: #6d6f78;
+}
+
+.dc-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dc-link::after {
+  content: " ↗";
+}
+
+.dc-danger {
+  background: #da373c;
+}
+
+.dc-danger:hover:not(:disabled) {
+  background: #a12828;
+}
+
+.dc-composer {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+
+.dc-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dc-quick button {
+  padding: 3px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--dc-panel);
+  color: var(--dc-text);
+  font: 500 12px var(--font-mono);
+  cursor: pointer;
+}
+
+.dc-quick button:hover {
+  background: #404249;
+}
+
+.dc-composer input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #383a40;
+  color: var(--dc-text);
+}
+
+.dc-composer input::placeholder {
+  color: var(--dc-muted);
+}
+
+.demo-foot {
+  display: flex;
+  flex: none;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--dc-deep);
+  color: var(--dc-muted);
+  font-size: 12px;
+}
+
+.demo-foot a,
+.demo .link-button {
+  color: #00a8fc;
+}
+
+.demo .link-button {
+  padding: 0;
+  font-size: 12px;
 }
 
 /* ------------------------------------------------------------------ prose */

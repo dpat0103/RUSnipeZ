@@ -127,6 +127,7 @@ async def section(
         "course_code": info.course_code if info else None,
         "course_title": info.course_title if info else None,
         "section_number": info.section_number if info else None,
+        "instructors": info.instructors if info else None,
         "campus": info.campus if info else None,
         **history,
     }
