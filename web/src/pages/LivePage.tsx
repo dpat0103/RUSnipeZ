@@ -2,12 +2,13 @@ import { useEvents, useStats } from "../api/hooks";
 import { DiscordCta } from "../components/DiscordCta";
 import { EventFeed } from "../components/EventFeed";
 import { StatTiles } from "../components/StatTiles";
-import { useTerm } from "../lib/hooks";
+import { useNow, useTerm } from "../lib/hooks";
 
 export function LivePage() {
   const { term, info, terms } = useTerm();
   const stats = useStats();
   const events = useEvents(term);
+  const now = useNow(60_000);
   const termNames = terms.map((t) => t.name ?? t.code).join(" and ");
 
   return (
@@ -21,13 +22,18 @@ export function LivePage() {
         </p>
       </section>
 
-      <StatTiles stats={stats.data} />
+      <StatTiles stats={stats.data} now={now} />
       {termNames && <p className="caption">Across {termNames}, all campuses.</p>}
 
       <section className="panel" aria-labelledby="feed-title">
         <div className="panel-head">
           <h2 id="feed-title">Latest changes{info?.name ? ` · ${info.name}` : ""}</h2>
           <span className="caption">Updates every 15 seconds</span>
+          <p className="panel-note">
+            The 40 most recent openings and closings in this term, newest first, across every
+            campus. An opening is a section one check found open after the check 30 seconds before
+            found it closed.
+          </p>
         </div>
         {events.isError ? (
           <p className="empty">The live feed is unavailable right now. Retrying automatically.</p>

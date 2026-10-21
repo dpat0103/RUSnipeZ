@@ -31,6 +31,7 @@ export interface Stats {
   openingsTotal: number;
   uptime24h: number | null;
   lastPollAt: string | null;
+  trackingSince: string | null;
 }
 
 export interface OpenSections {

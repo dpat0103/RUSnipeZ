@@ -214,6 +214,7 @@ async def test_stats(api, sessions) -> None:
     assert body["openings24h"] == 1
     assert body["openingsTotal"] == 1
     assert body["lastPollAt"] == "2026-11-16T14:01:00Z"
+    assert body["trackingSince"] == "2026-11-16T14:00:00Z"
     # Polls covered 2 of the 11 minutes since tracking began (14:00 to 14:10).
     assert body["uptime24h"] == round(2 / 11, 4)
 
@@ -227,6 +228,7 @@ async def test_stats_with_no_data(api) -> None:
         "openingsTotal": 0,
         "uptime24h": None,
         "lastPollAt": None,
+        "trackingSince": None,
     }
 
 

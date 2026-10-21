@@ -104,6 +104,7 @@ class Stats(Model):
     openings_total: int
     uptime_24h: float | None
     last_poll_at: datetime | None
+    tracking_since: datetime | None
 
 
 class Health(Model):

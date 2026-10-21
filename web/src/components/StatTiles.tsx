@@ -1,13 +1,18 @@
 import type { Stats } from "../api/types";
-import { formatCount, formatPercent } from "../lib/format";
+import { dateTime, formatCount, formatPercent } from "../lib/format";
 
-export function StatTiles({ stats }: { stats: Stats | undefined }) {
+const DAY_MS = 24 * 3600_000;
+
+export function StatTiles({ stats, now }: { stats: Stats | undefined; now: number }) {
+  // Until a full day has been tracked, say what the window really is.
+  const young = stats?.trackingSince && now - Date.parse(stats.trackingSince) < DAY_MS;
+  const since = young ? `since ${dateTime(stats.trackingSince!)}` : "in 24 hours";
   const tiles = [
     { label: "Open right now", value: stats && formatCount(stats.openNow) },
-    { label: "Openings in 24 hours", value: stats && formatCount(stats.openings24h) },
+    { label: `Openings ${since}`, value: stats && formatCount(stats.openings24h) },
     { label: "Sections tracked", value: stats && formatCount(stats.sectionsTracked) },
     {
-      label: "Uptime, 24 hours",
+      label: young ? `Uptime ${since}` : "Uptime, 24 hours",
       value: stats && (stats.uptime24h === null ? "—" : formatPercent(stats.uptime24h)),
     },
   ];

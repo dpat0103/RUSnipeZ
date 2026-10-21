@@ -37,6 +37,41 @@ export function meetingSummary(meets: Meeting[]): string {
     .join(" / ");
 }
 
+const DAY_NAMES: Record<string, string> = {
+  M: "Mon", T: "Tue", W: "Wed", H: "Thu", F: "Fri", S: "Sat", U: "Sun",
+};
+
+/** Rutgers day codes ("H" is Thursday) as readable names: "TH" becomes "Tue Thu". */
+export function dayNames(days: string): string {
+  return [...days].map((d) => DAY_NAMES[d] ?? d).join(" ");
+}
+
+/** "10:35–11:30 AM", or "11:30 AM–12:50 PM" when the range crosses noon. */
+export function timeRange(start: string, end: string | null): string {
+  const from = clock(start);
+  const to = clock(end);
+  if (!to) return from;
+  return from.slice(-2) === to.slice(-2) ? `${from.slice(0, -3)}–${to}` : `${from}–${to}`;
+}
+
+/** Short meeting labels for a section row: ["Tue Thu 2:00–3:20 PM"], or ["Online"]. */
+export function meetingLabels(meets: Meeting[]): string[] {
+  const timed = meets.filter((m) => m.start);
+  if (timed.length === 0) return [meets.length ? "Online, no set time" : "Time not listed"];
+  return timed.map((m) => `${dayNames(m.days) || "TBA"} ${timeRange(m.start!, m.end)}`);
+}
+
+/** Distinct campus locations a section meets at, by name. */
+export function meetingPlaces(meets: Meeting[]): string {
+  const places = [...new Set(meets.filter((m) => m.start).map((m) => LOCATION_NAMES[m.campus] ?? m.campus))];
+  return places.filter(Boolean).join(", ");
+}
+
+/** "AMIEL, DAVID" becomes "Amiel, David"; "O'BRIEN-SMITH" becomes "O'Brien-Smith". */
+export function nameCase(name: string): string {
+  return name.toLowerCase().replace(/(^|[\s,'-])([a-z])/g, (_, before: string, letter: string) => before + letter.toUpperCase());
+}
+
 /** "12s ago", "5m ago", "3h ago", then a date. */
 export function timeAgo(iso: string, now: number): string {
   const seconds = Math.max(0, Math.round((now - Date.parse(iso)) / 1000));

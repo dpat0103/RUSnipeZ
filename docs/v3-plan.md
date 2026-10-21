@@ -55,8 +55,14 @@ API, all under `/api`, documented at `/api/docs`:
 | `GET /v1/terms/{term}/sections/{index}` | Full history: medians, hour-of-day profile, recent openings |
 | `GET /v1/terms/{term}/catalogs/{campus}` | Catalog, gzipped, with ETag |
 
-Website pages: **Live** (stats, live feed, Discord call to action), **Search** (live status,
-last seen open, filters in the URL, section history, Discord alert preview), **How it works**.
+Website pages: **Live** (stats, live feed, Discord call to action), **Search** (collapsible
+course summaries, 20 per page, sort, filters in the URL, section history, Discord alert
+preview), **How it works** (Overview and Engineering tabs).
+
+Search runs in the browser over the downloaded catalog: tokenize, expand Rutgers
+abbreviations, score each term by field, keep courses matching every term when any exist,
+then order by phrase, level and section count. Measured at 0.4 to 3 ms per keystroke for
+4,546 courses.
 
 ### 3. Discord bot — next
 

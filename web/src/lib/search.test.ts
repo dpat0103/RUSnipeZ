@@ -39,7 +39,7 @@ const FIXTURES = prepareCourses([
   course("ADV ORGANIC CHEM I", "01:160:401", "10004", "Writing", "Computer Science"),
 ]);
 
-const NONE: Filters = { q: "", core: "", days: "", openOnly: false, hideSpn: false };
+const NONE: Filters = { q: "", core: "", days: "", openOnly: false, hideSpn: false, sort: "relevance" };
 
 describe("search", () => {
   it("expands whole-word abbreviations and ignores unknown words", () => {
@@ -73,6 +73,54 @@ describe("search", () => {
     expect(score(title!, ["10001"])).toBeGreaterThan(score(title!, ["01:001:101"]));
     expect(score(title!, ["missing"])).toBe(0);
     expect(() => score(title!, ["[", "*", "."])).not.toThrow();
+  });
+
+  it("drops partial matches when some course matches every term", () => {
+    const titles = filterCourses(FIXTURES, { ...NONE, q: "computer science" }, undefined).map((m) => m.course.title);
+    // MICROBIOL HLTH SCI matches only "science", so it is left out.
+    expect(titles).toEqual(["INTRO COMPUTER SCI", "ADV ORGANIC CHEM I"]);
+    expect(filterCourses(FIXTURES, { ...NONE, q: "computer science" }, undefined).every((m) => m.matchedAll)).toBe(true);
+  });
+
+  it("falls back to partial matches when nothing matches every term", () => {
+    const matches = filterCourses(FIXTURES, { ...NONE, q: "expository writing" }, undefined);
+    expect(matches[0]?.course.title).toBe("COLLEGE WRITING");
+    expect(matches.every((m) => !m.matchedAll)).toBe(true);
+  });
+
+  it("ranks a match at the start of a title word above one inside a word", () => {
+    const [organic, bio] = prepareCourses([
+      course("ORGANIC CHEMISTRY", "01:160:307", "20001"),
+      course("BIOCHEMISTRY", "01:694:301", "20002"),
+    ]);
+    expect(score(organic!, ["chem"]) - score(bio!, ["chem"])).toBeCloseTo((40 - 22) * 2, 5);
+  });
+
+  it("prefers the title phrase and undergraduate courses among full matches", () => {
+    const courses = prepareCourses([
+      { ...course("SEL PROB COMP SCI", "16:198:685", "40001"), level: "G" },
+      { ...course("RESEARCH IN COMPUTER SCIENCE MS THESIS", "16:198:701", "40002"), level: "G" },
+      course("INTRODUCTION TO COMPUTER SCIENCE", "01:198:111", "40003"),
+    ]);
+    // Give the graduate course many sections, as independent studies have.
+    courses[0]!.course.sections = Array.from({ length: 55 }, () => courses[0]!.course.sections[0]!);
+    expect(filterCourses(courses, { ...NONE, q: "computer science" }, undefined).map((m) => m.course.code)).toEqual([
+      "01:198:111",
+      "16:198:701",
+      "16:198:685",
+    ]);
+  });
+
+  it("sorts by open sections or by code on request", () => {
+    const open = new Set(["10003", "10004"]);
+    expect(filterCourses(FIXTURES, { ...NONE, sort: "open" }, open).map((m) => m.course.code).slice(0, 2)).toEqual([
+      "01:119:131",
+      "01:160:401",
+    ]);
+    expect(filterCourses(FIXTURES, { ...NONE, q: "writing", sort: "code" }, undefined).map((m) => m.course.code)).toEqual([
+      "01:160:401",
+      "01:355:101",
+    ]);
   });
 
   it("lists everything by course code when there is no query", () => {

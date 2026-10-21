@@ -1,5 +1,5 @@
 import type { CatalogCourse, CatalogSection, HistorySummary } from "../api/types";
-import { meetingSummary, timeAgo } from "../lib/format";
+import { meetingLabels, meetingPlaces, nameCase, plural, timeAgo } from "../lib/format";
 import { SectionDetail } from "./SectionDetail";
 
 interface Props {
@@ -9,82 +9,115 @@ interface Props {
   open: Set<string> | undefined;
   history: HistorySummary | undefined;
   now: number;
-  expanded: string | null;
-  onToggle: (index: string) => void;
+  expanded: boolean;
+  onToggleCourse: () => void;
+  highlight: string | null;
+  expandedSection: string | null;
+  onToggleSection: (index: string) => void;
   onPreview: (course: CatalogCourse, section: CatalogSection) => void;
 }
 
-export function CourseCard({ term, course, sections, open, history, now, expanded, onToggle, onPreview }: Props) {
-  const credits = course.credits !== null ? `${course.credits} cr` : course.creditsText;
+export function CourseCard(props: Props) {
+  const { course, sections, open, history, now, expanded, onToggleCourse } = props;
+  const credits = course.credits !== null ? `${course.credits} credits` : course.creditsText;
+  const openCount = open ? sections.filter((s) => open.has(s.index)).length : null;
+  const bodyId = `course-${course.code.replaceAll(":", "-")}`;
+
   return (
-    <article className="course">
-      <header className="course-head">
-        <span className="course-code">{course.code}</span>
-        <h3>{course.title}</h3>
-        <span className="chips">
-          {credits && <span className="chip">{credits}</span>}
-          {course.core.slice(0, 3).map((code) => (
-            <span className="chip chip-core" key={code}>
-              {code}
-            </span>
-          ))}
+    <article className="course" data-expanded={expanded || undefined}>
+      <button className="course-head" aria-expanded={expanded} aria-controls={bodyId} onClick={onToggleCourse}>
+        <span className="course-name">
+          <span className="course-code">{course.code}</span>
+          <span className="course-title">{course.title}</span>
+          <span className="chips">
+            {credits && <span className="chip">{credits}</span>}
+            {course.core.slice(0, 4).map((code) => (
+              <span className="chip chip-core" key={code}>
+                {code}
+              </span>
+            ))}
+          </span>
         </span>
-      </header>
-      <ul className="sections">
-        {sections.map((section) => {
-          const isOpen = open?.has(section.index);
-          const seen = history?.sections[section.index];
-          const isExpanded = expanded === section.index;
-          return (
-            <li key={section.index} className="section" data-open={isOpen || undefined}>
-              <button
-                className="section-row"
-                aria-expanded={isExpanded}
-                onClick={() => onToggle(section.index)}
-              >
-                <span className={`pill ${open ? (isOpen ? "pill-opened" : "pill-closed") : "pill-unknown"}`}>
-                  {open ? (isOpen ? "Open" : "Closed") : "…"}
-                </span>
-                <span className="index">{section.index}</span>
-                <span className="section-main">
-                  <span className="section-who">
-                    Section {section.number} · {section.instructors.join(", ") || "Instructor TBA"}
-                  </span>
-                  <span className="section-when">{meetingSummary(section.meets)}</span>
-                </span>
-                <span className="section-seen">
-                  {isOpen
-                    ? "Open now"
-                    : seen
-                      ? `Seen open ${timeAgo(seen.lastSeenOpen, now)}`
-                      : "Not seen open"}
-                </span>
-                <span className="badges">
-                  {section.spn && (
-                    <span className="badge badge-spn" title="Needs a special permission number">
-                      SPN
-                    </span>
-                  )}
-                  {section.crossListed.length > 0 && (
-                    <span className="badge badge-xl" title={`Cross-listed as ${section.crossListed.join(", ")}`}>
-                      XL
-                    </span>
-                  )}
-                </span>
-                <span className="chevron" aria-hidden="true" />
-              </button>
-              {isExpanded && (
-                <SectionDetail
-                  term={term}
-                  course={course}
-                  section={section}
-                  onPreview={() => onPreview(course, section)}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ul>
+        <span className="course-summary">
+          <span>{plural(sections.length, "section")}</span>
+          {openCount !== null && (
+            <span className={openCount ? "open-count" : "open-count is-zero"}>{openCount} open</span>
+          )}
+        </span>
+        <span className="chevron" aria-hidden="true" />
+      </button>
+
+      {expanded && (
+        <ul className="sections" id={bodyId}>
+          {sections.map((section) => (
+            <SectionItem key={section.index} {...props} section={section} seenAt={history?.sections[section.index]?.lastSeenOpen} now={now} />
+          ))}
+        </ul>
+      )}
     </article>
+  );
+}
+
+function SectionItem({
+  term,
+  course,
+  section,
+  open,
+  seenAt,
+  now,
+  highlight,
+  expandedSection,
+  onToggleSection,
+  onPreview,
+}: Props & { section: CatalogSection; seenAt: string | undefined }) {
+  const isOpen = open?.has(section.index);
+  const isExpanded = expandedSection === section.index;
+  const status = open ? (isOpen ? "open" : "closed") : "unknown";
+  const places = meetingPlaces(section.meets);
+
+  return (
+    <li className="section" data-status={status} data-highlight={highlight === section.index || undefined}>
+      <button className="section-row" aria-expanded={isExpanded} onClick={() => onToggleSection(section.index)}>
+        <span className={`pill pill-${status === "open" ? "opened" : status}`}>
+          {status === "open" ? "Open" : status === "closed" ? "Closed" : "…"}
+        </span>
+        <span className="section-id">
+          <span className="section-number">Sec {section.number}</span>
+          <span className="index">{section.index}</span>
+        </span>
+        <span className="section-main">
+          <span className="section-who">
+            {section.instructors.length ? section.instructors.map(nameCase).join(", ") : "Instructor TBA"}
+          </span>
+          <span className="meetings">
+            {meetingLabels(section.meets).map((label) => (
+              <span className="meeting" key={label}>
+                {label}
+              </span>
+            ))}
+            {places && <span className="place">{places}</span>}
+          </span>
+        </span>
+        <span className="section-seen">
+          {isOpen ? "Open now" : seenAt ? `Seen open ${timeAgo(seenAt, now)}` : "Not seen open"}
+        </span>
+        <span className="badges">
+          {section.spn && (
+            <span className="badge badge-spn" title="Needs a special permission number">
+              SPN
+            </span>
+          )}
+          {section.crossListed.length > 0 && (
+            <span className="badge badge-xl" title={`Cross-listed as ${section.crossListed.join(", ")}`}>
+              XL
+            </span>
+          )}
+        </span>
+        <span className="chevron" aria-hidden="true" />
+      </button>
+      {isExpanded && (
+        <SectionDetail term={term} course={course} section={section} onPreview={() => onPreview(course, section)} />
+      )}
+    </li>
   );
 }

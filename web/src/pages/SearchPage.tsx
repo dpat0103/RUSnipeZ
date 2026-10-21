@@ -1,18 +1,27 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useCatalog, useHistory, useOpenSections } from "../api/hooks";
 import type { Campus, CatalogCourse, CatalogSection } from "../api/types";
 import { AlertPreview } from "../components/AlertPreview";
 import { CourseCard } from "../components/CourseCard";
+import { Pagination } from "../components/Pagination";
 import { CAMPUSES, CAMPUS_NAMES, DAYS } from "../lib/config";
 import { formatCount, plural } from "../lib/format";
 import { useNow, useTerm } from "../lib/hooks";
-import { filterCourses, prepareCourses, type Filters } from "../lib/search";
+import { filterCourses, prepareCourses, type Filters, type Sort } from "../lib/search";
 
-const PAGE = 25;
+const PAGE_SIZE = 20;
+// With this few results, show their sections without a click.
+const AUTO_EXPAND_UNDER = 4;
+const SORTS: [Sort, string][] = [
+  ["relevance", "Best match"],
+  ["open", "Most open sections"],
+  ["code", "Course code"],
+];
 
-function readFilters(params: URLSearchParams): Filters & { campus: Campus } {
+function readFilters(params: URLSearchParams): Filters & { campus: Campus; page: number } {
   const campus = params.get("campus");
+  const sort = params.get("sort");
   return {
     campus: CAMPUSES.includes(campus as Campus) ? (campus as Campus) : "NB",
     q: params.get("q") ?? "",
@@ -20,6 +29,8 @@ function readFilters(params: URLSearchParams): Filters & { campus: Campus } {
     days: [...(params.get("days") ?? "")].filter((d) => "MTWHF".includes(d)).join(""),
     openOnly: params.get("open") === "1",
     hideSpn: params.get("spn") === "hide",
+    sort: SORTS.some(([value]) => value === sort) ? (sort as Sort) : "relevance",
+    page: Math.max(1, Number.parseInt(params.get("page") ?? "1", 10) || 1),
   };
 }
 
@@ -34,20 +45,33 @@ export function SearchPage() {
   const history = useHistory(term);
   const now = useNow(30_000);
 
-  const [shown, setShown] = useState(PAGE);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [toggledCourses, setToggledCourses] = useState<Set<string>>(new Set());
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ course: CatalogCourse; section: CatalogSection } | null>(null);
+  const resultsTop = useRef<HTMLParagraphElement>(null);
 
   const prepared = useMemo(() => (catalog.data ? prepareCourses(catalog.data.courses) : []), [catalog.data]);
   const matches = useMemo(
     () =>
       filterCourses(
         prepared,
-        { q: query, core: filters.core, days: filters.days, openOnly: filters.openOnly, hideSpn: filters.hideSpn },
+        {
+          q: query,
+          core: filters.core,
+          days: filters.days,
+          openOnly: filters.openOnly,
+          hideSpn: filters.hideSpn,
+          sort: filters.sort,
+        },
         open.data?.indexes,
       ),
-    [prepared, query, filters.core, filters.days, filters.openOnly, filters.hideSpn, open.data],
+    [prepared, query, filters.core, filters.days, filters.openOnly, filters.hideSpn, filters.sort, open.data],
   );
+
+  const pages = Math.max(1, Math.ceil(matches.length / PAGE_SIZE));
+  const page = Math.min(filters.page, pages);
+  const shown = matches.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const exactIndex = /^\d{5}$/.test(filters.q.trim()) ? filters.q.trim() : null;
 
   const update = (changes: Record<string, string | null>) => {
     setParams(
@@ -57,12 +81,27 @@ export function SearchPage() {
           if (value) next.set(key, value);
           else next.delete(key);
         }
+        if (!("page" in changes)) next.delete("page");
         return next;
       },
       { replace: true },
     );
-    setShown(PAGE);
+    setToggledCourses(new Set());
+    setExpandedSection(null);
   };
+
+  const goToPage = (next: number) => {
+    update({ page: next === 1 ? null : String(next) });
+    resultsTop.current?.scrollIntoView({ block: "start" });
+  };
+
+  const toggleCourse = (code: string) =>
+    setToggledCourses((current) => {
+      const next = new Set(current);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
 
   const sectionCount = matches.reduce((n, m) => n + m.sections.length, 0);
   const openCount = open.data
@@ -96,7 +135,10 @@ export function SearchPage() {
         <div className="filter-row">
           <label>
             <span className="visually-hidden">Campus</span>
-            <select value={filters.campus} onChange={(e) => update({ campus: e.target.value === "NB" ? null : e.target.value })}>
+            <select
+              value={filters.campus}
+              onChange={(e) => update({ campus: e.target.value === "NB" ? null : e.target.value })}
+            >
               {CAMPUSES.map((c) => (
                 <option key={c} value={c}>
                   {CAMPUS_NAMES[c]}
@@ -125,7 +167,9 @@ export function SearchPage() {
                   aria-pressed={active}
                   onClick={() =>
                     update({
-                      days: [..."MTWHF"].filter((d) => (d === code ? !active : filters.days.includes(d))).join("") || null,
+                      days:
+                        [..."MTWHF"].filter((d) => (d === code ? !active : filters.days.includes(d))).join("") ||
+                        null,
                     })
                   }
                 >
@@ -134,14 +178,25 @@ export function SearchPage() {
               );
             })}
           </div>
-          <button className="toggle" aria-pressed={filters.openOnly} onClick={() => update({ open: filters.openOnly ? null : "1" })}>
+          <button
+            className="toggle"
+            aria-pressed={filters.openOnly}
+            onClick={() => update({ open: filters.openOnly ? null : "1" })}
+          >
             Open now
           </button>
-          <button className="toggle" aria-pressed={filters.hideSpn} onClick={() => update({ spn: filters.hideSpn ? null : "hide" })}>
+          <button
+            className="toggle"
+            aria-pressed={filters.hideSpn}
+            onClick={() => update({ spn: filters.hideSpn ? null : "hide" })}
+          >
             Hide SPN
           </button>
           {filtered && (
-            <button className="link-button" onClick={() => update({ q: null, core: null, days: null, open: null, spn: null })}>
+            <button
+              className="link-button"
+              onClick={() => update({ q: null, core: null, days: null, open: null, spn: null })}
+            >
               Clear filters
             </button>
           )}
@@ -154,34 +209,56 @@ export function SearchPage() {
         <div className="skeleton-list" aria-label="Loading catalog" />
       ) : (
         <>
-          <p className="results-label" aria-live="polite">
-            {matches.length
-              ? `${plural(matches.length, "course")} · ${plural(sectionCount, "section")}${
-                  openCount !== null ? ` · ${formatCount(openCount)} open` : ""
-                }`
-              : "No sections match. Try fewer words or clear a filter."}
-          </p>
-          <div className="results">
-            {matches.slice(0, shown).map(({ course, sections }) => (
-              <CourseCard
-                key={course.code}
-                term={term!}
-                course={course}
-                sections={sections}
-                open={open.data?.indexes}
-                history={history.data}
-                now={now}
-                expanded={expanded}
-                onToggle={(index) => setExpanded((current) => (current === index ? null : index))}
-                onPreview={(c, s) => setPreview({ course: c, section: s })}
-              />
-            ))}
+          <div className="results-bar">
+            <p className="results-label" aria-live="polite" ref={resultsTop}>
+              {matches.length
+                ? `${plural(matches.length, "course")} · ${plural(sectionCount, "section")}${
+                    openCount !== null ? ` · ${formatCount(openCount)} open` : ""
+                  }`
+                : "No sections match. Try fewer words or clear a filter."}
+            </p>
+            {matches.length > 1 && (
+              <label className="sort">
+                <span>Sort</span>
+                <select
+                  value={filters.sort}
+                  onChange={(e) => update({ sort: e.target.value === "relevance" ? null : e.target.value })}
+                >
+                  {SORTS.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
-          {matches.length > shown && (
-            <button className="button show-more" onClick={() => setShown((n) => n + PAGE)}>
-              Show {Math.min(PAGE, matches.length - shown)} more of {formatCount(matches.length - shown)}
-            </button>
-          )}
+
+          <div className="results">
+            {shown.map(({ course, sections }) => {
+              const autoExpand =
+                matches.length < AUTO_EXPAND_UNDER || (exactIndex !== null && sections.some((s) => s.index === exactIndex));
+              return (
+                <CourseCard
+                  key={course.code}
+                  term={term!}
+                  course={course}
+                  sections={sections}
+                  open={open.data?.indexes}
+                  history={history.data}
+                  now={now}
+                  expanded={autoExpand !== toggledCourses.has(course.code)}
+                  onToggleCourse={() => toggleCourse(course.code)}
+                  highlight={exactIndex}
+                  expandedSection={expandedSection}
+                  onToggleSection={(index) => setExpandedSection((current) => (current === index ? null : index))}
+                  onPreview={(c, s) => setPreview({ course: c, section: s })}
+                />
+              );
+            })}
+          </div>
+
+          <Pagination page={page} pages={pages} onPage={goToPage} />
         </>
       )}
 

@@ -270,6 +270,10 @@ async def service_stats(session: AsyncSession, terms: list[str], now: datetime) 
     last_poll_at = await session.scalar(
         select(func.max(Poll.finished_at)).where(Poll.term.in_(terms), Poll.status == "ok")
     )
+    # Lets clients say "since 6:08 PM" instead of "24 hours" while tracking is young.
+    tracking_since = await session.scalar(
+        select(func.min(Poll.finished_at)).where(Poll.term.in_(terms))
+    )
     return {
         "sections_tracked": sections_tracked or 0,
         "open_now": openings.open_now,
@@ -277,6 +281,7 @@ async def service_stats(session: AsyncSession, terms: list[str], now: datetime) 
         "openings_total": openings.openings_total,
         "uptime_24h": round(sum(ratios) / len(ratios), 4) if ratios else None,
         "last_poll_at": last_poll_at,
+        "tracking_since": tracking_since,
     }
 
 

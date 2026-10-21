@@ -25,6 +25,7 @@ const stats: Stats = {
   openingsTotal: 42,
   uptime24h: 0.998,
   lastPollAt: NOW,
+  trackingSince: "2026-11-16T09:10:00Z",
 };
 
 const events: Events = {
@@ -105,14 +106,16 @@ const section: SectionHistory = {
   recent: [],
 };
 
-const ROUTES: [RegExp, unknown][] = [
-  [/\/api\/v1\/meta$/, meta],
-  [/\/api\/v1\/stats$/, stats],
-  [/\/api\/v1\/terms\/12027\/events/, events],
-  [/\/api\/v1\/terms\/12027\/open$/, open],
-  [/\/api\/v1\/terms\/12027\/history$/, history],
-  [/\/api\/v1\/terms\/12027\/sections\/25628$/, section],
-  [/\/api\/v1\/terms\/12027\/catalogs\/NB$/, catalog],
+let catalogBody: Catalog = catalog;
+
+const ROUTES: [RegExp, () => unknown][] = [
+  [/\/api\/v1\/meta$/, () => meta],
+  [/\/api\/v1\/stats$/, () => stats],
+  [/\/api\/v1\/terms\/12027\/events/, () => events],
+  [/\/api\/v1\/terms\/12027\/open$/, () => open],
+  [/\/api\/v1\/terms\/12027\/history$/, () => history],
+  [/\/api\/v1\/terms\/12027\/sections\/25628$/, () => section],
+  [/\/api\/v1\/terms\/12027\/catalogs\/NB$/, () => catalogBody],
 ];
 
 function renderAt(path: string) {
@@ -126,13 +129,14 @@ function renderAt(path: string) {
 }
 
 beforeEach(() => {
+  catalogBody = catalog;
   vi.useFakeTimers({ toFake: ["Date"], now: Date.parse(NOW) });
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
       const match = ROUTES.find(([pattern]) => pattern.test(url));
       return match
-        ? new Response(JSON.stringify(match[1]), { status: 200 })
+        ? new Response(JSON.stringify(match[1]()), { status: 200 })
         : new Response(JSON.stringify({ detail: "Not found" }), { status: 404 });
     }),
   );
@@ -157,6 +161,8 @@ describe("live page", () => {
     expect(await screen.findByText("INTRODUCTION TO COMPUTER SCIENCE")).toBeInTheDocument();
     expect(screen.getByText("15,560")).toBeInTheDocument();
     expect(screen.getByText("99.8%")).toBeInTheDocument();
+    // Tracking began five hours ago, so the 24-hour tiles say so.
+    expect(screen.getByText(/^Openings since Nov 16/)).toBeInTheDocument();
     expect(screen.getByText("Opened")).toBeInTheDocument();
     expect(screen.getByText("30s ago")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Live · checked 0s ago");
@@ -169,7 +175,7 @@ describe("search page", () => {
   it("shows live status and last-seen history for each section", async () => {
     renderAt("/search?q=computer");
     expect(await screen.findByText("1 course · 2 sections · 1 open")).toBeInTheDocument();
-    const [first, second] = screen.getAllByRole("button", { name: /Section 4/ });
+    const [first, second] = screen.getAllByRole("button", { name: /Sec 4/ });
     expect(within(first!).getByText("Open")).toBeInTheDocument();
     expect(within(first!).getByText("Open now")).toBeInTheDocument();
     expect(within(second!).getByText("Closed")).toBeInTheDocument();
@@ -179,7 +185,7 @@ describe("search page", () => {
   it("expands a section into its history and previews the Discord alert", async () => {
     const user = userEvent.setup();
     renderAt("/search");
-    await user.click(await screen.findByRole("button", { name: /Section 42/ }));
+    await user.click(await screen.findByRole("button", { name: /Sec 42/ }));
     expect(await screen.findByText("2 in the last 7 days · 5 in 30 days")).toBeInTheDocument();
     expect(screen.getByText("6 min (median)")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Most openings around 9 AM Eastern" })).toBeInTheDocument();
@@ -206,6 +212,50 @@ describe("search page", () => {
   it("reports when nothing matches", async () => {
     renderAt("/search?q=zzzz");
     expect(await screen.findByText("No sections match. Try fewer words or clear a filter.")).toBeInTheDocument();
+  });
+});
+
+describe("search results", () => {
+  function manyCourses(count: number): Catalog {
+    const [base] = catalog.courses;
+    return {
+      ...catalog,
+      courses: Array.from({ length: count }, (_, i) => ({
+        ...base!,
+        code: `01:198:${String(100 + i)}`,
+        title: `COURSE ${i}`,
+        sections: base!.sections.map((section, j) => ({ ...section, index: String(30000 + i * 10 + j) })),
+      })),
+    };
+  }
+
+  it("collapses courses into summaries and pages through them", async () => {
+    catalogBody = manyCourses(45);
+    const user = userEvent.setup();
+    renderAt("/search");
+    expect(await screen.findByText("45 courses · 90 sections · 0 open")).toBeInTheDocument();
+    const first = screen.getByRole("button", { name: /COURSE 0\b/ });
+    expect(first).toHaveAttribute("aria-expanded", "false");
+    expect(within(first).getByText("2 sections")).toBeInTheDocument();
+    expect(screen.queryByText("Sec 41")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(20);
+
+    await user.click(first);
+    expect(first).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByText("Sec 41")).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "Page 3" }));
+    expect(screen.getAllByRole("article")).toHaveLength(5);
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Page 3" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("opens the course and highlights the section for an index search", async () => {
+    catalogBody = manyCourses(45);
+    renderAt("/search?q=30121");
+    const course = await screen.findByRole("button", { name: /COURSE 12\b/ });
+    expect(course).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("30121").closest("li")).toHaveAttribute("data-highlight", "true");
   });
 });
 
