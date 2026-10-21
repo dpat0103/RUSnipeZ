@@ -16,12 +16,13 @@ promised fresher data. They send an ``ETag`` but ignore ``If-None-Match``,
 so conditional requests buy nothing.
 
 Neither endpoint sends CORS headers — a browser cannot call them from a page.
-See ``worker/`` for the proxy that fronts them.
+The service polls them server-side and exposes its own read API.
 """
 
 from __future__ import annotations
 
 import logging
+import re
 from types import TracebackType
 from typing import Any, Self
 
@@ -36,6 +37,8 @@ USER_AGENT = "ru-snipez/2.0 (+https://github.com/dpat0103/ru-snipez)"
 
 # Upstream advertises max-age=30; there is no point polling faster than this.
 MIN_POLL_SECONDS = 30.0
+
+_INDEX = re.compile(r"\d{5}")
 
 
 class SocError(RuntimeError):
@@ -94,19 +97,25 @@ class SocClient:
             raise SocError(f"{path} returned malformed JSON") from e
 
     async def open_sections(self, term: Term) -> set[str]:
-        """Return the set of index numbers currently marked open."""
+        """Return the set of index numbers currently marked open.
+
+        The response is university-wide whatever campus is requested.
+        """
         data = await self._get_json("/openSections.json", term.soc_params(self.campus))
         if not isinstance(data, list):
             raise SocError(f"openSections.json returned {type(data).__name__}, expected list")
-        return {str(index) for index in data}
+        indexes = {str(index) for index in data}
+        if any(not _INDEX.fullmatch(index) for index in indexes):
+            raise SocError("openSections.json returned an index that is not five digits")
+        return indexes
 
-    async def courses(self, term: Term) -> list[dict[str, Any]]:
-        """Return the full catalogue for the term.
+    async def courses(self, term: Term, campus: str | None = None) -> list[dict[str, Any]]:
+        """Return the full catalogue for the term and campus.
 
         ``subject`` is required by the endpoint but ignored by it; any value
         returns the whole campus catalogue.
         """
-        params = term.soc_params(self.campus) | {"subject": "198"}
+        params = term.soc_params(campus or self.campus) | {"subject": "198"}
         data = await self._get_json("/courses.json", params)
         if not isinstance(data, list):
             raise SocError(f"courses.json returned {type(data).__name__}, expected list")

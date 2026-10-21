@@ -1,0 +1,10 @@
+.git
+.venv
+.claude
+web
+legacy
+docs
+tests
+**/__pycache__
+**/node_modules
+.env

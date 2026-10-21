@@ -13,13 +13,12 @@ venv/
 .ruff_cache/
 .mypy_cache/
 
-# generated catalogue data
-data/*.json
-!data/.gitkeep
+# catalog builder output (`python -m rusnipez.catalog.build`)
+data/
 
-# node / worker
+# web
 node_modules/
-.wrangler/
+web/dist/
 
 # never commit browser binaries
 chromedriver*

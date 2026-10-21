@@ -1,0 +1,37 @@
+# Local stack: `docker compose up -d db` for development, or `docker compose up`
+# to also run the service in a container. The same file deploys to a VM later.
+name: rusnipez
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rusnipez
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rusnipez}
+      POSTGRES_DB: rusnipez
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rusnipez -d rusnipez"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  service:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      RUSNIPEZ_DATABASE_URL: postgresql+asyncpg://rusnipez:${POSTGRES_PASSWORD:-rusnipez}@db:5432/rusnipez
+      RUSNIPEZ_ACTIVE_TERMS: ${RUSNIPEZ_ACTIVE_TERMS:-12027,02027}
+    ports:
+      - "127.0.0.1:8000:8000"
+
+volumes:
+  pgdata:

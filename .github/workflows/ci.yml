@@ -2,12 +2,26 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [main, v3]
   pull_request:
 
 jobs:
-  test:
+  service:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: rusnipez
+          POSTGRES_PASSWORD: rusnipez
+          POSTGRES_DB: rusnipez_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rusnipez -d rusnipez_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      RUSNIPEZ_TEST_DATABASE_URL: postgresql+asyncpg://rusnipez:rusnipez@127.0.0.1:5432/rusnipez_test
+      RUSNIPEZ_REQUIRE_DB: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -21,14 +35,31 @@ jobs:
         run: .venv/bin/ruff check src tests
       - name: Format check
         run: .venv/bin/ruff format --check src tests
+      - name: Migrations match models
+        run: RUSNIPEZ_DATABASE_URL=$RUSNIPEZ_TEST_DATABASE_URL .venv/bin/alembic upgrade head && RUSNIPEZ_DATABASE_URL=$RUSNIPEZ_TEST_DATABASE_URL .venv/bin/alembic check
       - name: Test
         run: .venv/bin/pytest -q
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - name: History tests
-        run: node --test tests/*.test.mjs
       - name: Audit dependencies
         run: |
           uv pip install pip-audit
           .venv/bin/pip-audit --strict || echo "::warning::pip-audit reported findings"
+      - name: Docker image builds
+        run: docker build -t rusnipez-service .
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

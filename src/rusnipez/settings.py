@@ -1,0 +1,72 @@
+"""Runtime configuration. Every value can be set by an environment variable
+prefixed with ``RUSNIPEZ_`` (for example ``RUSNIPEZ_ACTIVE_TERMS=12027,02027``)."""
+
+from __future__ import annotations
+
+from functools import lru_cache
+from typing import Annotated
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+from rusnipez.soc.term import Term
+
+CAMPUSES = ("NB", "NK", "CM")
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="RUSNIPEZ_", env_file=".env", extra="ignore")
+
+    database_url: str = "postgresql+asyncpg://rusnipez:rusnipez@127.0.0.1:5432/rusnipez"
+
+    # Terms to poll, most important first. The first one is the website's default.
+    # Changing terms is this one setting; nothing else is hardcoded.
+    active_terms: Annotated[list[str], NoDecode] = ["12027", "02027"]
+
+    # Rutgers declares Cache-Control: max-age=30 on openSections.json, so polling
+    # faster cannot return fresher data.
+    poll_seconds: float = 30.0
+    poll_timeout_seconds: float = 10.0
+    max_backoff_seconds: float = 300.0
+
+    # A poll that changes at least max(minimum, ratio x open sections) is held
+    # until the change has lasted confirm_seconds. Rutgers occasionally serves a
+    # stale snapshot for about a minute; this stops it from faking mass
+    # closings, then mass openings and alerts on recovery.
+    change_guard_ratio: float = 0.02
+    change_guard_minimum: int = 50
+    change_guard_confirm_seconds: float = 120.0
+
+    catalog_refresh_hours: float = 6.0
+    poll_log_retention_days: int = 14
+
+    # Start the poller and catalog jobs with the API. Tests turn this off.
+    run_workers: bool = True
+
+    @field_validator("active_terms", mode="before")
+    @classmethod
+    def _split_terms(cls, value: object) -> object:
+        if isinstance(value, str):
+            value = [part.strip() for part in value.split(",") if part.strip()]
+        return value
+
+    @field_validator("active_terms")
+    @classmethod
+    def _validate_terms(cls, value: list[str]) -> list[str]:
+        if not value:
+            raise ValueError("at least one active term is required")
+        if len(set(value)) != len(value):
+            raise ValueError("active terms must be unique")
+        for code in value:
+            Term.parse(code)
+        return value
+
+    @property
+    def precise_window_seconds(self) -> float:
+        """Openings detected within this gap after the previous poll have exact timing."""
+        return self.poll_seconds * 3
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
