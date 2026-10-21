@@ -16,6 +16,8 @@ function course(title: string, code: string, index: string, instructor = "", sub
     core: title === "COLLEGE WRITING" ? ["WCr"] : [],
     synopsis: null,
     prereqs: null,
+    fee: null,
+    notes: null,
     sections: [
       {
         index,
@@ -24,6 +26,13 @@ function course(title: string, code: string, index: string, instructor = "", sub
         meets: [{ days: "MW", start: "10:20", end: "11:40", mode: "LEC", where: "HH A1", campus: "CAC" }],
         exam: null,
         spn,
+        spnFrom: null,
+        format: "in-person",
+        honors: false,
+        eligibility: null,
+        openTo: null,
+        comments: [],
+        notes: null,
         crossListed: [],
         subtitle: null,
         campus: "NB",
@@ -141,6 +150,44 @@ describe("search", () => {
     expect(filterCourses(FIXTURES, { ...NONE, openOnly: true }, open).map((m) => m.course.title)).toEqual([
       "INTRO COMPUTER SCI",
     ]);
+  });
+
+  it("filters by subject, level and credits", () => {
+    const courses = prepareCourses([
+      { ...course("DATA STRUCTURES", "01:198:112", "50001"), credits: 4 },
+      { ...course("SEMINAR", "16:198:500", "50002"), level: "G", credits: 3 },
+      { ...course("RESEARCH", "01:198:499", "50003"), credits: null },
+      course("CALCULUS I", "01:640:151", "50004"),
+    ]);
+    const codes = (extra: Partial<Filters>) => filterCourses(courses, { ...NONE, ...extra }, undefined).map((m) => m.course.code);
+    expect(codes({ subject: "640" })).toEqual(["01:640:151"]);
+    expect(codes({ level: "G" })).toEqual(["16:198:500"]);
+    expect(codes({ credits: "3" })).toEqual(["01:640:151", "16:198:500"]);
+    expect(codes({ credits: "4+" })).toEqual(["01:198:112"]);
+  });
+
+  it("filters sections by format, honors and time of day", () => {
+    const base = course("PHYSICS", "01:750:203", "60001");
+    const section = base.sections[0]!;
+    const [prepared] = prepareCourses([
+      {
+        ...base,
+        sections: [
+          { ...section, index: "60001", meets: [{ ...section.meets[0]!, start: "08:30" }] },
+          { ...section, index: "60002", format: "online", honors: true, meets: [] },
+          { ...section, index: "60003", format: "hybrid", meets: [{ ...section.meets[0]!, start: "18:00" }] },
+          { ...section, index: "60004", meets: [{ ...section.meets[0]!, start: "11:30" }, { ...section.meets[0]!, start: "13:00" }] },
+        ],
+      },
+    ]);
+    const indexes = (extra: Partial<Filters>) =>
+      filterCourses([prepared!], { ...NONE, ...extra }, undefined).flatMap((m) => m.sections.map((s) => s.index));
+    expect(indexes({ format: "online" })).toEqual(["60002"]);
+    expect(indexes({ honors: true })).toEqual(["60002"]);
+    expect(indexes({ time: "morning" })).toEqual(["60001"]);
+    expect(indexes({ time: "evening" })).toEqual(["60003"]);
+    // A morning lecture with an afternoon recitation is in neither window.
+    expect(indexes({ time: "afternoon" })).toEqual([]);
   });
 
   it("ignores open-only until live status has loaded", () => {

@@ -113,3 +113,15 @@ export function hourLabel(hour: number): string {
   if (hour === 12) return "12 PM";
   return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
 }
+
+const EXAM_ARRANGEMENTS = new Set(["By arrangement", "No final exam", "During class hour"]);
+
+/**
+ * Rutgers' exam field holds a scheduled date, an arrangement ("No final exam"),
+ * a common-exam group ("Math") or a bare internal code ("U").
+ */
+export function examLabel(exam: string | null): string | null {
+  if (!exam || /^[A-Z]$/.test(exam)) return null;
+  if (EXAM_ARRANGEMENTS.has(exam) || /\d/.test(exam)) return exam;
+  return `Common exam (${exam})`;
+}

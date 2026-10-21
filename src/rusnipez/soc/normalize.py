@@ -92,6 +92,23 @@ def collapse_meeting_times(raw_times: list[dict[str, Any]] | None) -> list[dict[
     return collapsed
 
 
+# sectionCourseType: how the section is taught.
+FORMATS = {"T": "in-person", "O": "online", "H": "hybrid"}
+
+# Comments on almost every section that tell a student nothing.
+BOILERPLATE_COMMENTS = {"Go to http://canvas.rutgers.edu"}
+
+
+def section_comments(raw: dict[str, Any]) -> list[str]:
+    """Rutgers' per-section comments, minus boilerplate, in their listed order."""
+    comments = []
+    for item in raw.get("comments") or []:
+        text = _clean(item.get("description"))
+        if text and text not in BOILERPLATE_COMMENTS and text not in comments:
+            comments.append(text)
+    return comments
+
+
 def normalize_section(raw: dict[str, Any]) -> dict[str, Any] | None:
     """Flatten one section. Returns None if it has no usable index."""
     index = _clean(raw.get("index"))
@@ -113,13 +130,21 @@ def normalize_section(raw: dict[str, Any]) -> dict[str, Any] | None:
         "number": _clean(raw.get("number")),
         "instructors": instructors,
         "meets": collapse_meeting_times(raw.get("meetingTimes")),
-        "exam": _clean(raw.get("finalExam")) or None,
+        # finalExam is never filled in; examCodeText carries the exam arrangement.
+        "exam": _clean(raw.get("finalExam")) or _clean(raw.get("examCodeText")) or None,
         # A non-null add code means an open seat still needs departmental
         # permission, so it is not actually registrable.
         "spn": raw.get("specialPermissionAddCode") is not None,
+        "spnFrom": _clean(raw.get("specialPermissionAddCodeDescription")) or None,
         "crossListed": cross_listed,
         "subtitle": _clean(raw.get("subtitle")) or _clean(raw.get("subtopic")) or None,
         "campus": _clean(raw.get("campusCode")),
+        "format": FORMATS.get(_clean(raw.get("sectionCourseType")), "in-person"),
+        "honors": bool(raw.get("honorPrograms")),
+        "eligibility": _clean(raw.get("sectionEligibility")) or None,
+        "openTo": _clean(raw.get("openToText")) or None,
+        "comments": section_comments(raw),
+        "notes": _clean(raw.get("sectionNotes")) or None,
     }
 
 
@@ -135,6 +160,10 @@ def normalize_course(raw: dict[str, Any]) -> dict[str, Any] | None:
 
     core = sorted({code for c in raw.get("coreCodes") or [] if (code := _clean(c.get("code")))})
     school = raw.get("school") or {}
+    try:
+        fee = float(_clean(raw.get("courseFee")) or 0)
+    except ValueError:
+        fee = 0.0
 
     return {
         "code": _clean(raw.get("courseString")),
@@ -151,6 +180,8 @@ def normalize_course(raw: dict[str, Any]) -> dict[str, Any] | None:
         "core": core,
         "synopsis": _clean(raw.get("synopsisUrl")) or None,
         "prereqs": _clean(raw.get("preReqNotes")) or None,
+        "fee": fee if fee > 0 else None,
+        "notes": _clean(raw.get("courseNotes")) or None,
         "sections": sections,
     }
 

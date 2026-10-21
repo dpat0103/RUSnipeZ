@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { webregUrl } from "./config";
-import { clock, duration, formatPercent, hourLabel, meetingSummary, plainText, plural, timeAgo } from "./format";
+import { clock, duration, examLabel, formatPercent, hourLabel, meetingSummary, plainText, plural, timeAgo } from "./format";
 
 describe("format", () => {
   it("converts 24-hour times", () => {
@@ -38,6 +38,14 @@ describe("format", () => {
     expect(hourLabel(13)).toBe("1 PM");
     expect(plural(1, "course")).toBe("1 course");
     expect(plural(2916, "section")).toBe("2,916 sections");
+  });
+
+  it("labels exam arrangements, dates, common exams and hides internal codes", () => {
+    expect(examLabel("No final exam")).toBe("No final exam");
+    expect(examLabel("12/21/2026 - 0400 - 0700 PM")).toBe("12/21/2026 - 0400 - 0700 PM");
+    expect(examLabel("Computer Science")).toBe("Common exam (Computer Science)");
+    expect(examLabel("U")).toBeNull();
+    expect(examLabel(null)).toBeNull();
   });
 
   it("strips markup from prerequisite notes", () => {

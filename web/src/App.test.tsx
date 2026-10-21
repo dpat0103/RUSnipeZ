@@ -67,6 +67,8 @@ const catalog: Catalog = {
       core: ["QQ"],
       synopsis: null,
       prereqs: "(01:198:120 INTRO PROGRAMMING )<em> OR </em>(01:640:112 PRECALC )",
+      fee: null,
+      notes: null,
       sections: ["25627", "25628"].map((index, i) => ({
         index,
         number: String(41 + i),
@@ -74,9 +76,26 @@ const catalog: Catalog = {
         meets: [{ days: "MW", start: "10:35", end: "11:30", mode: "LEC", where: "LSH B205", campus: "LIV" }],
         exam: null,
         spn: false,
+        spnFrom: null,
+        format: "in-person",
+        honors: false,
+        eligibility: null,
+        openTo: null,
+        comments: [],
+        notes: null,
         crossListed: [],
         subtitle: null,
         campus: "NB",
+        ...(i === 1 && {
+          format: "hybrid" as const,
+          honors: true,
+          eligibility: "JUNIORS AND SENIORS",
+          openTo: "MAJ: 198 (Computer Science)",
+          comments: ["First 7 weeks"],
+          spn: true,
+          spnFrom: "Department staff",
+          crossListed: ["30001"],
+        }),
       })),
     },
   ],
@@ -201,7 +220,51 @@ describe("search page", () => {
 
   it("reports when nothing matches", async () => {
     renderAt("/search?q=zzzz");
-    expect(await screen.findByText("No sections match. Try fewer words or clear a filter.")).toBeInTheDocument();
+    expect(await screen.findByText("No sections match. Try fewer words or remove a filter.")).toBeInTheDocument();
+  });
+});
+
+describe("search filters and details", () => {
+  it("shows every detail Rutgers gives for a section", async () => {
+    const user = userEvent.setup();
+    renderAt("/search");
+    const row = await screen.findByRole("button", { name: /Sec 42/ });
+    for (const badge of ["Hybrid", "Honors", "Restricted", "SPN", "XL"]) {
+      expect(within(row).getByText(badge)).toBeInTheDocument();
+    }
+    await user.click(row);
+    expect(await screen.findByText("Hybrid: some meetings online")).toBeInTheDocument();
+    expect(screen.getByText("Juniors And Seniors")).toBeInTheDocument();
+    expect(screen.getByText("MAJ: 198 (Computer Science)")).toBeInTheDocument();
+    expect(screen.getByText("Needed to register; issued by department staff.")).toBeInTheDocument();
+    expect(screen.getByText("First 7 weeks")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "30001" })).toHaveAttribute("href", "/search?q=30001&term=12027");
+  });
+
+  it("opens more filters, applies them from the URL and removes them as chips", async () => {
+    const user = userEvent.setup();
+    renderAt("/search?format=hybrid&honors=1");
+    expect(await screen.findByText("1 course · 1 section · 0 open")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Filters · 2" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("combobox", { name: "Format" })).toHaveValue("hybrid");
+    expect(screen.getByRole("checkbox", { name: "Honors sections only" })).toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "Remove Hybrid" }));
+    expect(screen.getByRole("button", { name: "Filters · 1" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+    expect(await screen.findByText("1 course · 2 sections · 1 open")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Remove / })).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Level" }), "G");
+    expect(await screen.findByText("No sections match. Try fewer words or remove a filter.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove Graduate" })).toBeInTheDocument();
+  });
+
+  it("lists departments from the catalog", async () => {
+    const user = userEvent.setup();
+    renderAt("/search");
+    await user.click(await screen.findByRole("button", { name: "Filters" }));
+    expect(screen.getByRole("option", { name: "Computer Science (198)" })).toBeInTheDocument();
   });
 });
 

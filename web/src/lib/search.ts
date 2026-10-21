@@ -1,4 +1,4 @@
-import type { CatalogCourse, CatalogSection } from "../api/types";
+import type { CatalogCourse, CatalogSection, SectionFormat } from "../api/types";
 
 /**
  * Rutgers abbreviates course titles heavily ("MICROBIOL HLTH SCI",
@@ -38,6 +38,8 @@ export function queryTerms(query: string): string[] {
 export interface PreparedSection {
   section: CatalogSection;
   days: Set<string>;
+  /** Start of each timed meeting, in minutes after midnight. */
+  starts: number[];
 }
 
 export interface PreparedCourse {
@@ -60,6 +62,7 @@ export function prepareCourses(courses: CatalogCourse[]): PreparedCourse[] {
     sections: course.sections.map((section) => ({
       section,
       days: new Set(section.meets.flatMap((m) => [...m.days])),
+      starts: section.meets.flatMap((m) => (m.start ? [minutes(m.start)] : [])),
     })),
     rawTitle: course.title.toLowerCase(),
     title: `${course.title} ${expandAbbreviations(course.title)}`.toLowerCase(),
@@ -68,6 +71,32 @@ export function prepareCourses(courses: CatalogCourse[]): PreparedCourse[] {
     subject: course.subjectName.toLowerCase(),
     indexes: new Set(course.sections.map((s) => s.index)),
   }));
+}
+
+const minutes = (hhmm: string) => {
+  const [h = 0, m = 0] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+};
+
+export type TimeOfDay = "morning" | "afternoon" | "evening";
+
+/** Start-time windows, in minutes after midnight: before noon, noon to 5 PM, 5 PM on. */
+export const TIME_WINDOWS: Record<TimeOfDay, [number, number]> = {
+  morning: [0, 12 * 60],
+  afternoon: [12 * 60, 17 * 60],
+  evening: [17 * 60, 24 * 60],
+};
+
+/** Every timed meeting starts in the window; sections with no set time never match. */
+export function meetsDuring(starts: number[], time: TimeOfDay): boolean {
+  const [from, to] = TIME_WINDOWS[time];
+  return starts.length > 0 && starts.every((start) => start >= from && start < to);
+}
+
+/** "4+" matches four or more credits; other values match exactly. */
+export function creditsMatch(credits: number | null, wanted: string): boolean {
+  if (credits === null) return false;
+  return wanted === "4+" ? credits >= 4 : credits === Number(wanted);
 }
 
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -141,6 +170,13 @@ export interface Filters {
   openOnly: boolean;
   hideSpn: boolean;
   sort: Sort;
+  /** Subject code, such as "198". */
+  subject?: string;
+  format?: SectionFormat | "";
+  time?: TimeOfDay | "";
+  level?: "U" | "G" | "";
+  credits?: string;
+  honors?: boolean;
 }
 
 export interface Match {
@@ -168,21 +204,28 @@ export function filterCourses(
   let matches: Match[] = [];
 
   for (const prepared of courses) {
-    if (filters.core && !prepared.course.core.includes(filters.core)) continue;
+    const { course } = prepared;
+    if (filters.core && !course.core.includes(filters.core)) continue;
+    if (filters.subject && course.subject !== filters.subject) continue;
+    if (filters.level && course.level !== filters.level) continue;
+    if (filters.credits && !creditsMatch(course.credits, filters.credits)) continue;
     const { score: relevance, matchedAll } = terms.length
       ? rank(prepared, terms)
       : { score: 0, matchedAll: true };
     if (terms.length && relevance === 0) continue;
 
     const sections = prepared.sections
-      .filter(({ section, days: meets }) => {
+      .filter(({ section, days: meets, starts }) => {
         if (filters.hideSpn && section.spn) return false;
+        if (filters.honors && !section.honors) return false;
+        if (filters.format && section.format !== filters.format) return false;
+        if (filters.time && !meetsDuring(starts, filters.time)) return false;
         // Open-only applies once live status has loaded.
         if (filters.openOnly && open && !open.has(section.index)) return false;
         return days.every((day) => meets.has(day));
       })
       .map(({ section }) => section);
-    if (sections.length) matches.push({ course: prepared.course, sections, relevance, matchedAll });
+    if (sections.length) matches.push({ course, sections, relevance, matchedAll });
   }
 
   if (matches.some((m) => m.matchedAll)) matches = matches.filter((m) => m.matchedAll);

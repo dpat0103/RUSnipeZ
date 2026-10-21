@@ -145,6 +145,61 @@ class TestNormalizeSection:
         )
         assert normalize_section({"index": "12345", "specialPermissionAddCode": "P"})["spn"] is True
 
+    def test_real_sample_details(self) -> None:
+        section = normalize_section(SAMPLE["sections"][0])
+        # A scheduled exam date wins over the general arrangement.
+        assert section["exam"] == "12/21/2026 - 0400 - 0700 PM"
+        assert section["format"] == "in-person"
+        assert section["honors"] is False
+        assert section["eligibility"] is None
+        assert section["openTo"] is None
+        assert section["comments"] == []
+        assert section["notes"] is None
+        assert section["spnFrom"] is None
+
+    def test_exam_falls_back_to_arrangement_before_dates_are_published(self) -> None:
+        raw = {"index": "12345", "finalExam": None, "examCodeText": "No final exam"}
+        assert normalize_section(raw)["exam"] == "No final exam"
+
+    def test_restrictions_notes_and_format(self) -> None:
+        section = normalize_section(
+            {
+                "index": "12345",
+                "sectionCourseType": "H",
+                "honorPrograms": [{"code": "A"}],
+                "sectionEligibility": "JUNIORS AND SENIORS",
+                "openToText": "MAJ: 198 (Computer Science)",
+                "sectionNotes": " PREREQ: 01:198:111 ",
+                "specialPermissionAddCode": "D",
+                "specialPermissionAddCodeDescription": "Department staff",
+                "comments": [
+                    {"code": "05", "description": "Go to http://canvas.rutgers.edu"},
+                    {"code": "23", "description": "Hybrid Section - Some Meetings Online"},
+                    {"code": "23", "description": "Hybrid Section - Some Meetings Online"},
+                    {"code": "AU", "description": "First-year students welcome"},
+                ],
+            }
+        )
+        assert section["format"] == "hybrid"
+        assert section["honors"] is True
+        assert section["eligibility"] == "JUNIORS AND SENIORS"
+        assert section["openTo"] == "MAJ: 198 (Computer Science)"
+        assert section["notes"] == "PREREQ: 01:198:111"
+        assert section["spnFrom"] == "Department staff"
+        # Boilerplate and duplicate comments are dropped; order is kept.
+        assert section["comments"] == [
+            "Hybrid Section - Some Meetings Online",
+            "First-year students welcome",
+        ]
+
+    @pytest.mark.parametrize(
+        ("code", "expected"), [("T", "in-person"), ("O", "online"), ("", "in-person")]
+    )
+    def test_format_codes(self, code: str, expected: str) -> None:
+        assert (
+            normalize_section({"index": "12345", "sectionCourseType": code})["format"] == expected
+        )
+
 
 class TestNormalizeCourse:
     def test_real_sample_course(self) -> None:
@@ -155,7 +210,18 @@ class TestNormalizeCourse:
         assert course["core"] == ["HST", "SOEHS"]
         assert course["school"] == "School of Arts and Sciences"
         assert course["credits"] == 3
+        assert course["fee"] is None
+        assert course["notes"] is None
         assert len(course["sections"]) == 1
+
+    @pytest.mark.parametrize(
+        ("raw", "expected"), [("106.00", 106.0), ("0", None), ("", None), ("n/a", None)]
+    )
+    def test_course_fee(self, raw: str, expected: float | None) -> None:
+        course = normalize_course(
+            {"courseString": "01:000:001", "courseFee": raw, "sections": [{"index": "1"}]}
+        )
+        assert course["fee"] == expected
 
     def test_course_with_no_sections_is_dropped(self) -> None:
         assert normalize_course({"courseString": "01:000:000", "sections": []}) is None

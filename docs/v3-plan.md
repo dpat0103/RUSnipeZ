@@ -61,6 +61,12 @@ preview), **How it works** (Overview and Engineering tabs). A **Discord preview*
 the search results runs every planned bot command against live data and keeps a snipe list
 (15 max) for the browser session only, so visitors can see the bot before it ships.
 
+The design uses the logo's palette (electric blue, navy, ice, cyan) with light and navy-dark
+themes. Search shows what the Rutgers catalog provides that students need: format (in person,
+hybrid, online), class-year and major restrictions, honors, special permission issuer, exam
+arrangement, fees and notes, with filters for department, core, format, time of day, level,
+credits and honors.
+
 Search runs in the browser over the downloaded catalog: tokenize, expand Rutgers
 abbreviations, score each term by field, keep courses matching every term when any exist,
 then order by phrase, level and section count. Measured at 0.4 to 3 ms per keystroke for

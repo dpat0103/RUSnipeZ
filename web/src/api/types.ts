@@ -96,6 +96,8 @@ export interface Meeting {
   campus: string;
 }
 
+export type SectionFormat = "in-person" | "hybrid" | "online";
+
 export interface CatalogSection {
   index: string;
   number: string;
@@ -103,9 +105,19 @@ export interface CatalogSection {
   meets: Meeting[];
   exam: string | null;
   spn: boolean;
+  /** Who issues special permission numbers, such as "Department staff". */
+  spnFrom: string | null;
   crossListed: string[];
   subtitle: string | null;
   campus: string;
+  format: SectionFormat;
+  honors: boolean;
+  /** Class-year restriction, such as "JUNIORS AND SENIORS". */
+  eligibility: string | null;
+  /** Major or minor restriction, such as "MAJ: 198 (Computer Science)". */
+  openTo: string | null;
+  comments: string[];
+  notes: string | null;
 }
 
 export interface CatalogCourse {
@@ -121,6 +133,8 @@ export interface CatalogCourse {
   core: string[];
   synopsis: string | null;
   prereqs: string | null;
+  fee: number | null;
+  notes: string | null;
   sections: CatalogSection[];
 }
 

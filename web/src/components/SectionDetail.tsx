@@ -2,11 +2,19 @@ import type { ReactNode } from "react";
 import { useSection } from "../api/hooks";
 import type { CatalogCourse, CatalogSection } from "../api/types";
 import { LOCATION_NAMES, webregUrl } from "../lib/config";
-import { clock, dateTime, duration, plainText } from "../lib/format";
+import { Link } from "react-router";
+import type { SectionFormat } from "../api/types";
+import { clock, dateTime, duration, examLabel, nameCase, plainText } from "../lib/format";
 import { useDemo } from "../demo/context";
 import { watchFrom } from "../demo/model";
 import { useTerm } from "../lib/hooks";
 import { HourChart } from "./HourChart";
+
+const FORMAT_LABELS: Record<SectionFormat, string> = {
+  "in-person": "In person",
+  hybrid: "Hybrid: some meetings online",
+  online: "Online",
+};
 
 interface Props {
   term: string;
@@ -59,13 +67,47 @@ export function SectionDetail({ term, course, section }: Props) {
       "Not listed"
     ),
   ]);
+  rows.push(["Format", FORMAT_LABELS[section.format]]);
   if (section.subtitle) rows.push(["Topic", section.subtitle]);
-  if (section.exam) rows.push(["Final exam", section.exam]);
+  const exam = examLabel(section.exam);
+  if (exam) rows.push(["Final exam", exam]);
   if (course.core.length) rows.push(["Core requirements", course.core.join(", ")]);
   if (course.prereqs) rows.push(["Prerequisites", plainText(course.prereqs)]);
-  if (section.spn) rows.push(["Restriction", "Needs a special permission number from the department."]);
+  if (section.eligibility) rows.push(["Class years", nameCase(section.eligibility)]);
+  if (section.openTo) rows.push(["Open to", section.openTo]);
+  if (section.spn) {
+    rows.push([
+      "Special permission",
+      `Needed to register${section.spnFrom ? `; issued by ${section.spnFrom.toLowerCase()}` : ""}.`,
+    ]);
+  }
   if (section.crossListed.length) {
-    rows.push(["Cross-listed", `${section.crossListed.join(", ")} (same class, separate seats)`]);
+    rows.push([
+      "Cross-listed",
+      <span>
+        {section.crossListed.map((index, i) => (
+          <span key={index}>
+            {i > 0 && ", "}
+            <Link className="index" to={`/search?q=${index}${term ? `&term=${term}` : ""}`}>
+              {index}
+            </Link>
+          </span>
+        ))}{" "}
+        (same class, separate seats)
+      </span>,
+    ]);
+  }
+  if (course.fee !== null) rows.push(["Course fee", `$${course.fee.toFixed(2)}`]);
+  const notes = [...section.comments, section.notes, course.notes].filter((n): n is string => Boolean(n));
+  if (notes.length) {
+    rows.push([
+      "Notes",
+      <ul className="plain-list">
+        {notes.map((note) => (
+          <li key={note}>{note}</li>
+        ))}
+      </ul>,
+    ]);
   }
 
   return (

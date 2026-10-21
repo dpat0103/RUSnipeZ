@@ -30,7 +30,9 @@ export function CourseCard(props: Props) {
           <span className="course-code">{course.code}</span>
           <span className="course-title">{course.title}</span>
           <span className="chips">
+            <span className="chip chip-plain">{course.subjectName}</span>
             {credits && <span className="chip">{credits}</span>}
+            {course.fee !== null && <span className="chip">${course.fee.toFixed(0)} fee</span>}
             {course.core.slice(0, 4).map((code) => (
               <span className="chip chip-core" key={code}>
                 {code}
@@ -103,6 +105,18 @@ function SectionItem({
         </span>
         <span className="badges">
           {watching && <span className="badge badge-watch">Watching</span>}
+          {section.format !== "in-person" && (
+            <span className="badge badge-format">{section.format === "online" ? "Online" : "Hybrid"}</span>
+          )}
+          {section.honors && <span className="badge badge-honors">Honors</span>}
+          {(section.eligibility || section.openTo) && (
+            <span
+              className="badge badge-restricted"
+              title={[section.eligibility && nameCase(section.eligibility), section.openTo].filter(Boolean).join(" · ")}
+            >
+              Restricted
+            </span>
+          )}
           {section.spn && (
             <span className="badge badge-spn" title="Needs a special permission number">
               SPN
