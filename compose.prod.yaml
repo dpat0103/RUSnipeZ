@@ -1,0 +1,27 @@
+# Production overrides for a small (1 GB) server. Use with:
+#   docker compose -f compose.yaml -f compose.prod.yaml up -d
+# Secrets come from a .env file next to this one (POSTGRES_PASSWORD, ...).
+
+x-logging: &logging
+  driver: json-file
+  # The poller logs continuously; cap each container at 30 MB of logs.
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    # Defaults assume a much larger machine.
+    command: >
+      postgres
+      -c shared_buffers=64MB
+      -c effective_cache_size=256MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=32MB
+      -c max_connections=20
+    mem_limit: 256m
+    logging: *logging
+
+  service:
+    mem_limit: 512m
+    logging: *logging
