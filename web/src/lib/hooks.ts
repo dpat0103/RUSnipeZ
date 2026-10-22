@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
+import { serverNow } from "../api/client";
 import { useMeta } from "../api/hooks";
 import type { TermInfo } from "../api/types";
 
-/** Current time, refreshed on an interval, for "12s ago" labels. */
+/** Current time by the server's clock, refreshed on an interval, for "12s ago" labels. */
 export function useNow(intervalMs = 1000): number {
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(serverNow);
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), intervalMs);
+    const timer = setInterval(() => setNow(serverNow()), intervalMs);
     return () => clearInterval(timer);
   }, [intervalMs]);
   return now;

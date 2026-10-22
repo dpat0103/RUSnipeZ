@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import { useCatalog, useHistory, useOpenSections } from "../api/hooks";
 import type { Campus, SectionFormat } from "../api/types";
 import { CourseCard } from "../components/CourseCard";
+import { TagGuide } from "../components/Glossary";
 import { Pagination } from "../components/Pagination";
 import { DiscordPanel } from "../demo/DiscordPanel";
 import { CAMPUSES, CAMPUS_NAMES, DAYS } from "../lib/config";
@@ -72,6 +73,7 @@ export function SearchPage() {
   const now = useNow(30_000);
 
   const [moreOpen, setMoreOpen] = useState(() => MORE.some((key) => params.has(key)));
+  const [guideOpen, setGuideOpen] = useState(false);
   const [toggledCourses, setToggledCourses] = useState<Set<string>>(new Set());
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const resultsTop = useRef<HTMLDivElement>(null);
@@ -365,6 +367,14 @@ export function SearchPage() {
                       }`
                     : "No sections match. Try fewer words or remove a filter."}
                 </p>
+                <button
+                  className="toggle toggle-guide"
+                  aria-expanded={guideOpen}
+                  aria-controls="tag-guide"
+                  onClick={() => setGuideOpen((v) => !v)}
+                >
+                  <span aria-hidden="true">?</span> What do the tags mean?
+                </button>
                 {matches.length > 1 && (
                   <label className="sort">
                     <span>Sort</span>
@@ -381,6 +391,7 @@ export function SearchPage() {
                   </label>
                 )}
               </div>
+              {guideOpen && <TagGuide id="tag-guide" />}
 
               <div className="results">
                 {shown.map(({ course, sections }) => {

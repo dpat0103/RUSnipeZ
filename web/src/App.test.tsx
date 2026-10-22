@@ -23,6 +23,8 @@ const stats: Stats = {
   openNow: 15560,
   openings24h: 42,
   openingsTotal: 42,
+  medianOpenSeconds7d: 240,
+  checks24h: 5760,
   uptime24h: 0.998,
   lastPollAt: NOW,
   trackingSince: "2026-11-16T09:10:00Z",
@@ -176,12 +178,15 @@ describe("live page", () => {
     expect(await screen.findByText("INTRODUCTION TO COMPUTER SCIENCE")).toBeInTheDocument();
     expect(screen.getByText("15,560")).toBeInTheDocument();
     expect(screen.getByText("99.8%")).toBeInTheDocument();
+    expect(screen.getByText("4 min")).toBeInTheDocument();
+    expect(screen.getByText("5,760")).toBeInTheDocument();
     // Tracking began five hours ago, so the 24-hour tiles say so.
     expect(screen.getByText(/^Openings since Nov 16/)).toBeInTheDocument();
-    expect(screen.getByText("Opened")).toBeInTheDocument();
-    expect(screen.getByText("30s ago")).toBeInTheDocument();
+    const feed = within(screen.getByRole("region", { name: /Latest changes/ }));
+    expect(feed.getByText("Opened")).toBeInTheDocument();
+    expect(feed.getByText("30s ago")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Live · checked 0s ago");
-    expect(screen.getByText("Across Spring 2027 and Winter 2027, all campuses.")).toBeInTheDocument();
+    expect(screen.getByText(/^Across Spring 2027 and Winter 2027, all campuses · 42 openings recorded since/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "25627" })).toHaveAttribute("href", "/search?q=25627&term=12027");
   });
 });

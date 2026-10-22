@@ -1,6 +1,17 @@
-import { useSearchParams } from "react-router";
+import { useEffect, type ReactNode } from "react";
+import { Link, useLocation, useSearchParams } from "react-router";
+import { useStats } from "../api/hooks";
+import {
+  ArchitectureDiagram,
+  ChangeGuardDiagram,
+  DataModel,
+  PollCycle,
+  TimingDiagram,
+} from "../components/Diagrams";
 import { DiscordCta } from "../components/DiscordCta";
+import { Glossary } from "../components/Glossary";
 import { GITHUB_URL } from "../lib/config";
+import { duration, formatCount } from "../lib/format";
 
 const VIEWS = [
   ["overview", "Overview"],
@@ -10,6 +21,11 @@ type View = (typeof VIEWS)[number][0];
 
 export function HowPage() {
   const [params, setParams] = useSearchParams();
+  const { hash } = useLocation();
+  // Links to #glossary arrive before the page renders it.
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+  }, [hash]);
   const view: View = params.get("view") === "engineering" ? "engineering" : "overview";
   const select = (next: View) =>
     setParams(
@@ -23,7 +39,7 @@ export function HowPage() {
     );
 
   return (
-    <article className="prose">
+    <article className="prose prose-wide">
       <h1>How it works</h1>
       <div className="tabs" role="tablist" aria-label="Audience">
         {VIEWS.map(([value, label]) => (
@@ -47,69 +63,103 @@ export function HowPage() {
   );
 }
 
+function Numbers({ items }: { items: [ReactNode, string][] }) {
+  return (
+    <dl className="numbers">
+      {items.map(([value, label]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+const FLOW = [
+  ["Check", "Every 30 seconds, it asks Rutgers which sections are open, for every campus and active term."],
+  ["Spot", "A section that was full on one check and open on the next just opened."],
+  ["Alert", "Students watching it get a Discord DM with a WebReg link, index filled in."],
+  ["Remember", "Every opening is recorded, so you can see how often and when a section opens."],
+] as const;
+
+const PAGES = [
+  ["/", "Live", "Openings and closings as they happen, plus totals."],
+  ["/search", "Search", "Any course or section: open now, when it was last open, and its history."],
+  ["/search", "Discord preview", "Beside the search results, try the bot: /snipe, /check, and the alert you would get."],
+] as const;
+
 function Overview() {
+  const stats = useStats().data;
+  const median = stats?.medianOpenSeconds7d;
   return (
     <>
       <p className="lead">
         RU SnipeZ watches every Rutgers course section and tells students the moment a seat opens.
       </p>
+      <Numbers
+        items={[
+          [stats ? formatCount(stats.sectionsTracked) : "15,000+", "sections watched"],
+          ["30 s", "between checks"],
+          [stats?.checks24h ? formatCount(stats.checks24h) : "5,760", "checks a day"],
+          ["3", "campuses"],
+          ["0", "NetIDs or passwords asked"],
+        ]}
+      />
 
       <h2>The problem</h2>
       <p>
-        Popular sections fill in the first hours of registration, and most have no waitlist. When
-        someone drops a class, the seat goes to whoever refreshes WebReg first. Students end up
-        checking the same index number by hand, sometimes for days.
+        Popular sections fill in the first hours of registration, and most have no waitlist. When someone
+        drops, the seat goes to whoever refreshes WebReg first
+        {median != null ? (
+          <>
+            , and a freed seat lasts a median of <strong>{duration(median)}</strong> before someone takes it
+          </>
+        ) : null}
+        . Students end up checking the same index by hand, sometimes for days.
       </p>
 
       <h2>What RU SnipeZ does</h2>
-      <ol className="steps">
-        <li>
-          <strong>Checks constantly.</strong> Every 30 seconds it asks Rutgers which sections are
-          open, for every campus and every active term.
-        </li>
-        <li>
-          <strong>Spots openings.</strong> A section that was full on one check and open on the next
-          just opened.
-        </li>
-        <li>
-          <strong>Alerts on Discord.</strong> Students watching that section get a direct message
-          with a button that opens WebReg with the index already filled in.
-        </li>
-        <li>
-          <strong>Keeps history.</strong> Every opening is recorded, so you can see how often a
-          section opens and at what time of day.
-        </li>
+      <ol className="flow">
+        {FLOW.map(([title, text]) => (
+          <li key={title}>
+            <strong>{title}</strong>
+            <span>{text}</span>
+          </li>
+        ))}
       </ol>
 
       <h2>What this website shows</h2>
-      <ul>
-        <li>
-          <strong>Live:</strong> openings and closings as they are detected, plus totals.
-        </li>
-        <li>
-          <strong>Search:</strong> any course or section, whether it is open right now, and its
-          history.
-        </li>
-        <li>
-          <strong>Discord preview:</strong> next to the search results, try the bot itself. Snipe
-          sections, run commands like /check and /lastopen, and see the alert you would get. It
-          resets when you close the tab.
-        </li>
-      </ul>
-      <p>Alerts themselves happen on Discord, which students already have on their phones.</p>
+      <div className="cards">
+        {PAGES.map(([to, title, text]) => (
+          <Link className="card-link" key={title} to={to}>
+            <strong>{title}</strong>
+            <span>{text}</span>
+          </Link>
+        ))}
+      </div>
 
-      <h2>Reliable by design</h2>
-      <p>
-        Rutgers&apos; system sometimes returns an outdated list for about a minute, which would make
-        thousands of sections look like they closed and reopened. RU SnipeZ recognizes this and
-        ignores it, so students never get a false alert.
-      </p>
+      <div className="callouts">
+        <section>
+          <h2>Reliable by design</h2>
+          <p>
+            Rutgers sometimes serves an outdated list for about a minute, which would make thousands of
+            sections look like they closed and reopened. RU SnipeZ recognizes it and waits it out, so
+            nobody gets a false alert.
+          </p>
+        </section>
+        <section>
+          <h2>Private by design</h2>
+          <p>
+            RU SnipeZ never asks for a NetID or password and never registers for anyone. You click the
+            link and sign in to WebReg yourself.
+          </p>
+        </section>
+      </div>
 
-      <h2>Privacy</h2>
-      <p>
-        RU SnipeZ never asks for a NetID or password and never registers for anyone. You click the
-        link and sign in to WebReg yourself.
-      </p>
+      <h2 id="glossary">Glossary</h2>
+      <p>Rutgers shorthand you will see on courses and sections.</p>
+      <Glossary />
 
       <DiscordCta compact />
     </>
@@ -124,35 +174,28 @@ function Engineering() {
         read-only API. This website and the Discord bot both read from it.
       </p>
 
-      <h2>Architecture</h2>
-      <pre className="diagram">{`Rutgers SOC API
-  courses.json        catalog per campus     every 6 h
-  openSections.json   every open index       every 30 s
-          |
-          v
-+--------------------------------------------------------------+
-| rusnipez service (one asyncio process)                       |
-|                                                              |
-|   catalog sync   -> catalogs, sections                       |
-|   poller -> diff -> change guard -> openings, polls          |
-|   FastAPI        -> /api/v1/*   read-only, CDN-cached        |
-|   Discord bot    -> watches -> alert outbox -> DMs   (next)  |
-+-------------------------------+------------------------------+
-                                |
-                          PostgreSQL 17
+      <Numbers
+        items={[
+          ["~15,000", "open indexes per check"],
+          ["30 s", "check cadence, Rutgers' cache floor"],
+          ["120 s", "change guard hold"],
+          ["293 kB", "largest catalog, gzipped"],
+          ["0.4–3 ms", "per search keystroke"],
+        ]}
+      />
 
-React website  --  GET /api/v1/*  -->  FastAPI`}</pre>
-      <p>
-        One process keeps a single source of truth for the open set, and one request per term
-        serves every user, which is lighter on Rutgers than per-user polling.
-      </p>
+      <h2>Architecture</h2>
+      <ArchitectureDiagram />
 
       <h2>Detecting an opening</h2>
       <p>
         <code>openSections.json</code> returns every open index for the university (about 15,000
         five-digit strings). Detection is a set difference against the stored open set:
       </p>
-      <pre className="code">{`every 30 s, per active term:
+      <PollCycle />
+      <details className="code-details">
+        <summary>The loop in pseudocode</summary>
+        <pre className="code">{`every 30 s, per active term:
   current  = fetch openSections.json
   previous = SELECT index FROM openings WHERE closed_at IS NULL
   opened   = current - previous
@@ -161,6 +204,7 @@ React website  --  GET /api/v1/*  -->  FastAPI`}</pre>
   INSERT INTO openings (index, opened_at, open_detected_after) ...  -- opened
   UPDATE openings SET closed_at, close_detected_after ...         -- closed
   INSERT INTO polls (status = 'ok', counts) ...                   -- one transaction`}</pre>
+      </details>
       <ul>
         <li>
           A section that stays open produces no event, so alerts need no cooldown and cannot repeat.
@@ -179,29 +223,12 @@ React website  --  GET /api/v1/*  -->  FastAPI`}</pre>
       <p>
         Rutgers&apos; endpoint is load-balanced, and one backend appears to serve a frozen old snapshot. In our
         first live run it appeared at 18:02, 18:17 and 18:32: every 15 minutes, for about a minute,
-        4,308 sections vanished and 19 long-closed ones reappeared. A rule that confirms after two
-        matching checks would have accepted it, because it lasted two checks.
+        4,308 sections vanished and 19 long-closed ones reappeared.
       </p>
-      <ul>
-        <li>
-          A poll whose changes reach <code>max(50, 2% of open sections)</code> is held.
-        </li>
-        <li>It is applied only if it persists for 120 seconds.</li>
-        <li>
-          If upstream recovers first, nothing is recorded, and the held snapshot&apos;s SHA-256
-          fingerprint is remembered so that exact list is never applied again.
-        </li>
-        <li>Ordinary polls, with a handful of changes, are never delayed.</li>
-      </ul>
+      <ChangeGuardDiagram />
 
       <h2>Timing and history</h2>
-      <p>
-        Each opening stores <code>opened_at</code> (the check that saw it open) and{" "}
-        <code>open_detected_after</code> (the previous successful check), so the true opening time
-        is known to lie in that window, usually 30 seconds. After an outage the window is wider and
-        the API marks it imprecise. Sections already open on the very first check have no known
-        opening time and never count as openings.
-      </p>
+      <TimingDiagram />
       <table>
         <thead>
           <tr>
@@ -232,40 +259,7 @@ React website  --  GET /api/v1/*  -->  FastAPI`}</pre>
       </table>
 
       <h2>Data model</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Table</th>
-            <th>Holds</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <code>catalogs</code>
-            </td>
-            <td>Each term and campus catalog, gzipped, with a content-hash ETag</td>
-          </tr>
-          <tr>
-            <td>
-              <code>sections</code>
-            </td>
-            <td>One row per index for joins: course, section number, campus</td>
-          </tr>
-          <tr>
-            <td>
-              <code>openings</code>
-            </td>
-            <td>One row per opening, with both timing windows</td>
-          </tr>
-          <tr>
-            <td>
-              <code>polls</code>
-            </td>
-            <td>Every check: ok, held or error, with counts. Feeds uptime; kept 14 days</td>
-          </tr>
-        </tbody>
-      </table>
+      <DataModel />
 
       <h2>Search</h2>
       <p>
@@ -328,7 +322,13 @@ React website  --  GET /api/v1/*  -->  FastAPI`}</pre>
         <tbody>
           <tr>
             <td>
-              <code>GET /api/v1/meta</code>, <code>/stats</code>
+              <code>GET /api/v1/meta</code>
+            </td>
+            <td>4 s</td>
+          </tr>
+          <tr>
+            <td>
+              <code>GET /api/v1/stats</code>
             </td>
             <td>10 s</td>
           </tr>

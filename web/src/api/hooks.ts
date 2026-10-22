@@ -1,14 +1,35 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { api } from "./client";
-import type { Campus, OpenSections } from "./types";
+import { api, serverNow } from "./client";
+import type { Campus, Meta, OpenSections } from "./types";
 
 // Refresh intervals follow the server's 30 second polling cadence.
 const LIVE_MS = 15_000;
 const HISTORY_MS = 60_000;
 
+// Margin after a check is due before asking for it: the check itself takes a
+// moment, and the CDN may still hold the previous answer for a few seconds.
+const CHECK_MARGIN_MS = 3_000;
+const RETRY_MS = 2_000;
+
+/**
+ * Fetch meta again just after the next check is due rather than on a fixed
+ * timer, so the header's "checked 12s ago" rarely runs past the 30 second
+ * cadence. Until the new check shows up, retry every couple of seconds.
+ */
+export function nextMetaRefetch(meta: Meta | undefined, now: number): number {
+  const last = Math.max(0, ...(meta?.terms ?? []).map((t) => (t.lastPollAt ? Date.parse(t.lastPollAt) : 0)));
+  if (!meta || last === 0) return LIVE_MS;
+  const due = last + meta.pollSeconds * 1000 + CHECK_MARGIN_MS - now;
+  return Math.min(LIVE_MS, Math.max(RETRY_MS, due));
+}
+
 // Query definitions are shared so every caller hits the same cache entry.
 export const metaQuery = () =>
-  queryOptions({ queryKey: ["meta"], queryFn: ({ signal }) => api.meta(signal), refetchInterval: LIVE_MS });
+  queryOptions({
+    queryKey: ["meta"],
+    queryFn: ({ signal }) => api.meta(signal),
+    refetchInterval: (query) => nextMetaRefetch(query.state.data, serverNow()),
+  });
 
 export const statsQuery = () =>
   queryOptions({ queryKey: ["stats"], queryFn: ({ signal }) => api.stats(signal), refetchInterval: LIVE_MS });

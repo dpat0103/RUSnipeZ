@@ -29,6 +29,8 @@ export interface Stats {
   openNow: number;
   openings24h: number;
   openingsTotal: number;
+  medianOpenSeconds7d: number | null;
+  checks24h: number;
   uptime24h: number | null;
   lastPollAt: string | null;
   trackingSince: string | null;

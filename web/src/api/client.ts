@@ -18,8 +18,28 @@ export class ApiError extends Error {
   }
 }
 
+// Server time minus this device's time, learned from each response, so
+// "checked 12s ago" stays right on a device whose clock is off. A CDN copy
+// keeps the Date it was made with and reports its Age, so the two add up to
+// now. Both have one-second resolution, so smaller differences are ignored.
+let clockOffsetMs = 0;
+
+/** The current time by the server's clock. */
+export function serverNow(): number {
+  return Date.now() + clockOffsetMs;
+}
+
+function syncClock(response: Response): void {
+  const date = Date.parse(response.headers.get("date") ?? "");
+  if (Number.isNaN(date)) return;
+  const age = Number(response.headers.get("age") ?? 0) || 0;
+  const offset = date + age * 1000 - Date.now();
+  clockOffsetMs = Math.abs(offset) > 3000 ? offset : 0;
+}
+
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`/api${path}`, { signal, headers: { Accept: "application/json" } });
+  syncClock(response);
   if (!response.ok) {
     let detail = `Request failed (${response.status})`;
     try {

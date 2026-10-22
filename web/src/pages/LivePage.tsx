@@ -4,7 +4,9 @@ import { useEvents, useStats } from "../api/hooks";
 import { Crosshair } from "../components/Crosshair";
 import { DiscordCta } from "../components/DiscordCta";
 import { EventFeed } from "../components/EventFeed";
+import { HeroDevices } from "../components/HeroDevices";
 import { StatTiles } from "../components/StatTiles";
+import { dateTime, plural } from "../lib/format";
 import { useNow, useTerm } from "../lib/hooks";
 
 const SUGGESTIONS = ["Intro to computer science", "Calculus", "Expository writing", "Organic chemistry"];
@@ -37,12 +39,7 @@ export function LivePage() {
   return (
     <>
       <section className="hero">
-        <Crosshair className="hero-mark" />
-        <span className="hero-sparkles" aria-hidden="true">
-          {Array.from({ length: 6 }, (_, i) => (
-            <span key={i}>+</span>
-          ))}
-        </span>
+        <div className="hero-copy">
         <p className="eyebrow">
           <span className="live-dot" aria-hidden="true" />
           Live{info?.name ? ` for ${info.name}` : ""}
@@ -74,10 +71,19 @@ export function LivePage() {
             </Link>
           ))}
         </p>
+        </div>
+        <HeroDevices events={events.data?.events} now={now} />
       </section>
 
       <StatTiles stats={stats.data} now={now} />
-      {termNames && <p className="caption">Across {termNames}, all campuses.</p>}
+      {termNames && (
+        <p className="caption">
+          Across {termNames}, all campuses
+          {stats.data?.trackingSince &&
+            ` · ${plural(stats.data.openingsTotal, "opening")} recorded since ${dateTime(stats.data.trackingSince)}`}
+          .
+        </p>
+      )}
 
       <section className="panel" aria-labelledby="feed-title">
         <div className="panel-head">
