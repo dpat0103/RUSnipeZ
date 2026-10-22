@@ -1,0 +1,31 @@
+name: health
+
+# Free downtime alerts: GitHub emails the repository owner when a scheduled
+# run fails. It checks the live site end to end (Vercel, the API server and
+# its database) and that the poller has checked Rutgers recently.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Live data is fresh
+        run: |
+          set -euo pipefail
+          stats=$(curl -fsS --retry 3 --retry-delay 20 --max-time 20 https://ru-snipez.vercel.app/api/v1/stats)
+          echo "$stats"
+          python3 - "$stats" <<'PY'
+          import json
+          import sys
+          from datetime import UTC, datetime
+
+          last = json.loads(sys.argv[1])["lastPollAt"]
+          age = (datetime.now(UTC) - datetime.fromisoformat(last.replace("Z", "+00:00"))).total_seconds()
+          print(f"Last Rutgers check {age:.0f} seconds ago")
+          if age > 600:
+              sys.exit(f"Live data is stale: last check {age:.0f} seconds ago")
+          PY
