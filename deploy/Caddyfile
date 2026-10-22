@@ -1,0 +1,12 @@
+# HTTPS front door for the API. Caddy obtains and renews the certificate
+# for RUSNIPEZ_HOST (e.g. 34-74-230-121.sslip.io) automatically.
+{$RUSNIPEZ_HOST} {
+	# Only the API is served; the website itself is on Vercel.
+	handle /api/* {
+		reverse_proxy service:8000
+	}
+
+	handle {
+		respond "Not found" 404
+	}
+}

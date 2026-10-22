@@ -1,0 +1,18 @@
+# Cap outbound bandwidth so no traffic spike can run up a cloud bill.
+# Outbound data is the only thing that can cost money on the free e2-micro;
+# at 2 Mbit/s the worst case is about 0.9 GB an hour, roughly $0.11.
+# Install: sudo cp deploy/egress-cap.service /etc/systemd/system/
+#          sudo systemctl enable --now egress-cap
+[Unit]
+Description=Cap outbound bandwidth at 2 Mbit/s
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/tc qdisc replace dev ens4 root tbf rate 2mbit burst 32kb latency 400ms
+ExecStop=/usr/sbin/tc qdisc del dev ens4 root
+
+[Install]
+WantedBy=multi-user.target

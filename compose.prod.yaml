@@ -25,3 +25,26 @@ services:
   service:
     mem_limit: 512m
     logging: *logging
+
+  # HTTPS for the API. The only container reachable from the internet.
+  caddy:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    depends_on:
+      - service
+    environment:
+      RUSNIPEZ_HOST: ${RUSNIPEZ_HOST:?set RUSNIPEZ_HOST in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    mem_limit: 128m
+    logging: *logging
+
+volumes:
+  # Certificates live here; keeping them avoids re-issuing on every restart.
+  caddy_data:
+  caddy_config:
