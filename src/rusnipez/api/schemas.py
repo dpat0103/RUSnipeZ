@@ -103,6 +103,8 @@ class Stats(Model):
     open_now: int
     openings_24h: int
     openings_total: int
+    median_open_seconds_7d: int | None
+    checks_24h: int
     uptime_24h: float | None
     last_poll_at: datetime | None
     tracking_since: datetime | None

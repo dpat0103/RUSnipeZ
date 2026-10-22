@@ -202,8 +202,9 @@ async def term_overview(session: AsyncSession, terms: list[str]) -> list[dict]:
     last_polls = dict(
         (
             await session.execute(
+                # A held poll still reached Rutgers, so it counts as a check.
                 select(Poll.term, func.max(Poll.finished_at))
-                .where(Poll.term.in_(terms), Poll.status == "ok")
+                .where(Poll.term.in_(terms), Poll.status != "error")
                 .group_by(Poll.term)
             )
         ).all()
@@ -229,8 +230,11 @@ async def term_overview(session: AsyncSession, terms: list[str]) -> list[dict]:
     ]
 
 
-async def service_stats(session: AsyncSession, terms: list[str], now: datetime) -> dict:
+async def service_stats(
+    session: AsyncSession, terms: list[str], now: datetime, *, precise_window: float
+) -> dict:
     day_ago = now - timedelta(days=1)
+    window = _window(precise_window)
     in_terms = bindparam("terms", expanding=True)
     sections_tracked = await session.scalar(
         select(func.count()).select_from(Section).where(Section.term.in_(terms))
@@ -241,11 +245,21 @@ async def service_stats(session: AsyncSession, terms: list[str], now: datetime) 
                 SELECT count(*) FILTER (WHERE closed_at IS NULL) AS open_now,
                        count(*) FILTER (WHERE {OBSERVED} AND opened_at >= :day_ago)
                            AS openings_24h,
-                       count(*) FILTER (WHERE {OBSERVED}) AS openings_total
+                       count(*) FILTER (WHERE {OBSERVED}) AS openings_total,
+                       -- How long a seat lasts before someone takes it, over a week
+                       -- of openings whose start and end are both known to a check.
+                       percentile_cont(0.5) WITHIN GROUP (
+                           ORDER BY extract(epoch FROM closed_at - opened_at)
+                       ) FILTER (
+                           WHERE {OBSERVED} AND opened_at - open_detected_after <= {window}
+                             AND close_detected_after IS NOT NULL
+                             AND closed_at - close_detected_after <= {window}
+                             AND closed_at >= :week_ago
+                       ) AS median_open_seconds
                   FROM openings
                  WHERE term IN :terms
             """).bindparams(in_terms),
-            {"terms": terms, "day_ago": day_ago},
+            {"terms": terms, "day_ago": day_ago, "week_ago": now - timedelta(days=7)},
         )
     ).one()
     # Uptime is the share of minutes in the last day (or since tracking began)
@@ -255,6 +269,8 @@ async def service_stats(session: AsyncSession, terms: list[str], now: datetime) 
             SELECT term,
                    count(DISTINCT date_trunc('minute', finished_at))
                        FILTER (WHERE status <> 'error' AND finished_at >= :day_ago) AS covered,
+                   count(*) FILTER (WHERE status <> 'error' AND finished_at >= :day_ago)
+                       AS checks,
                    min(finished_at) AS first_poll
               FROM polls
              WHERE term IN :terms
@@ -263,12 +279,14 @@ async def service_stats(session: AsyncSession, terms: list[str], now: datetime) 
         {"terms": terms, "day_ago": day_ago},
     )
     ratios = []
+    checks = 0
     for row in coverage:
+        checks += row.checks
         start = max(row.first_poll, day_ago)
         minutes = max(1, int((now - start).total_seconds() // 60) + 1)
         ratios.append(min(1.0, row.covered / minutes))
     last_poll_at = await session.scalar(
-        select(func.max(Poll.finished_at)).where(Poll.term.in_(terms), Poll.status == "ok")
+        select(func.max(Poll.finished_at)).where(Poll.term.in_(terms), Poll.status != "error")
     )
     # Lets clients say "since 6:08 PM" instead of "24 hours" while tracking is young.
     tracking_since = await session.scalar(
@@ -279,6 +297,12 @@ async def service_stats(session: AsyncSession, terms: list[str], now: datetime) 
         "open_now": openings.open_now,
         "openings_24h": openings.openings_24h,
         "openings_total": openings.openings_total,
+        "median_open_seconds_7d": (
+            round(openings.median_open_seconds)
+            if openings.median_open_seconds is not None
+            else None
+        ),
+        "checks_24h": checks,
         "uptime_24h": round(sum(ratios) / len(ratios), 4) if ratios else None,
         "last_poll_at": last_poll_at,
         "tracking_since": tracking_since,

@@ -71,6 +71,33 @@ async def test_meta_lists_active_terms_in_priority_order(api, sessions) -> None:
     }
 
 
+async def test_meta_counts_held_polls_as_checks(api, sessions) -> None:
+    await seed(sessions)
+    held_at = T0 + timedelta(minutes=2)
+    async with sessions.begin() as session:
+        session.add(
+            Poll(
+                term="12027",
+                started_at=held_at,
+                finished_at=held_at,
+                status="held",
+                opened=0,
+                closed=0,
+            )
+        )
+        session.add(
+            Poll(
+                term="12027",
+                started_at=held_at,
+                finished_at=held_at + timedelta(minutes=1),
+                status="error",
+            )
+        )
+    response = await api.get("/api/v1/meta")
+    assert response.headers["cache-control"] == routes.META
+    assert response.json()["terms"][0]["lastPollAt"] == "2026-11-16T14:02:00Z"
+
+
 async def test_open_sections(api, sessions) -> None:
     await seed(sessions)
     response = await api.get("/api/v1/terms/12027/open")
@@ -214,6 +241,9 @@ async def test_stats(api, sessions) -> None:
     assert body["openNow"] == 1
     assert body["openings24h"] == 1
     assert body["openingsTotal"] == 1
+    # 10002 was seen open by one check and closed by the next.
+    assert body["medianOpenSeconds7d"] == 30
+    assert body["checks24h"] == 3
     assert body["lastPollAt"] == "2026-11-16T14:01:00Z"
     assert body["trackingSince"] == "2026-11-16T14:00:00Z"
     # Polls covered 2 of the 11 minutes since tracking began (14:00 to 14:10).
@@ -227,6 +257,8 @@ async def test_stats_with_no_data(api) -> None:
         "openNow": 0,
         "openings24h": 0,
         "openingsTotal": 0,
+        "medianOpenSeconds7d": None,
+        "checks24h": 0,
         "uptime24h": None,
         "lastPollAt": None,
         "trackingSince": None,

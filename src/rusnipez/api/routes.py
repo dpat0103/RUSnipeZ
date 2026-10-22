@@ -19,6 +19,9 @@ router = APIRouter(prefix="/api")
 # CDN and browser lifetimes. Live data matches the 30s upstream cadence;
 # catalogs change a few times a day at most and are validated by ETag.
 LIVE = "public, max-age=10, s-maxage=10"
+# Meta carries the last check time behind the site's "checked 12s ago", and is
+# small, so the CDN holds it briefly to keep that label close to the truth.
+META = "public, max-age=2, s-maxage=4"
 HISTORY = "public, max-age=60, s-maxage=60"
 CATALOG = "public, max-age=300, s-maxage=3600"
 
@@ -59,7 +62,7 @@ async def health(session: SessionDep, response: Response) -> dict:
 
 @router.get("/v1/meta", response_model=schemas.Meta)
 async def meta(session: SessionDep, settings: SettingsDep, response: Response) -> dict:
-    response.headers["Cache-Control"] = LIVE
+    response.headers["Cache-Control"] = META
     return {
         "default_term": settings.active_terms[0],
         "poll_seconds": settings.poll_seconds,
@@ -70,7 +73,9 @@ async def meta(session: SessionDep, settings: SettingsDep, response: Response) -
 @router.get("/v1/stats", response_model=schemas.Stats)
 async def stats(session: SessionDep, settings: SettingsDep, response: Response) -> dict:
     response.headers["Cache-Control"] = LIVE
-    return await reports.service_stats(session, settings.active_terms, now())
+    return await reports.service_stats(
+        session, settings.active_terms, now(), precise_window=settings.precise_window_seconds
+    )
 
 
 @router.get("/v1/terms/{term}/open", response_model=schemas.OpenSections)
