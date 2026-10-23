@@ -144,7 +144,7 @@ async def section(
 )
 async def catalog(
     term: TermDep,
-    campus: Annotated[str, Path(pattern=r"^(NB|NK|CM)$")],
+    campus: Annotated[str, Path(pattern=r"^(NB|NK|CM|OC)$")],
     session: SessionDep,
     request: Request,
 ) -> Response:

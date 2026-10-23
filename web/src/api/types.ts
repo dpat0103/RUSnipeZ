@@ -1,7 +1,7 @@
 // Mirrors src/rusnipez/api/schemas.py and the catalog payload from
 // src/rusnipez/catalog/build.py. Timestamps are ISO 8601 strings in UTC.
 
-export type Campus = "NB" | "NK" | "CM";
+export type Campus = "NB" | "NK" | "CM" | "OC";
 
 export interface CatalogInfo {
   campus: Campus;

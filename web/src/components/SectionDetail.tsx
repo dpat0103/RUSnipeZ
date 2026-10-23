@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useSection } from "../api/hooks";
 import type { CatalogCourse, CatalogSection } from "../api/types";
-import { LOCATION_NAMES, webregUrl } from "../lib/config";
+import { LOCATION_NAMES, OFF_CAMPUS_NAMES, webregUrl } from "../lib/config";
 import { Link } from "react-router";
 import type { SectionFormat } from "../api/types";
 import { clock, dateTime, duration, examLabel, nameCase, plainText } from "../lib/format";
@@ -59,7 +59,7 @@ export function SectionDetail({ term, course, section }: Props) {
             {m.start ? `${m.days || "TBA"} ${clock(m.start)} to ${clock(m.end)}` : "No set time"}
             {m.mode && ` · ${m.mode.toLowerCase()}`}
             {m.where && ` · ${m.where}`}
-            {m.campus && m.start && ` (${LOCATION_NAMES[m.campus] ?? m.campus})`}
+            {m.campus && m.start && ` (${OFF_CAMPUS_NAMES[section.campus] ?? LOCATION_NAMES[m.campus] ?? m.campus})`}
           </li>
         ))}
       </ul>

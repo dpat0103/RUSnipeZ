@@ -1,11 +1,27 @@
 import type { Campus } from "../api/types";
 
-export const CAMPUSES: Campus[] = ["NB", "NK", "CM"];
+export const CAMPUSES: Campus[] = ["NB", "NK", "CM", "OC"];
 
 export const CAMPUS_NAMES: Record<Campus, string> = {
   NB: "New Brunswick",
   NK: "Newark",
   CM: "Camden",
+  OC: "Off-campus",
+};
+
+/** Rutgers' off-campus locations by section campus code, named as the Schedule of Classes does. */
+export const OFF_CAMPUS_NAMES: Record<string, string> = {
+  B: "Burlington County College, Mt Laurel",
+  CC: "Camden County College, Blackwood",
+  H: "County College of Morris",
+  CU: "Cumberland County College",
+  MC: "Denville (RU-Morris)",
+  WM: "Freehold (WMHEC)",
+  L: "Lincroft (RU-BCC)",
+  AC: "Mays Landing (RU-ACCC)",
+  J: "Joint Base McGuire-Dix-Lakehurst",
+  D: "Mercer County Community College",
+  RV: "North Branch (RU-RVCC)",
 };
 
 export const LOCATION_NAMES: Record<string, string> = {

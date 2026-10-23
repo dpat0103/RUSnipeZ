@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import { useCatalog, useHistory, useOpenSections } from "../api/hooks";
 import type { Campus, SectionFormat } from "../api/types";
 import { CourseCard } from "../components/CourseCard";
+import { UnlistedSection } from "../components/UnlistedSection";
 import { TagGuide } from "../components/Glossary";
 import { Pagination } from "../components/Pagination";
 import { DiscordPanel } from "../demo/DiscordPanel";
@@ -392,6 +393,8 @@ export function SearchPage() {
                 )}
               </div>
               {guideOpen && <TagGuide id="tag-guide" />}
+
+              {exactIndex && matches.length === 0 && term && <UnlistedSection term={term} index={exactIndex} />}
 
               <div className="results">
                 {shown.map(({ course, sections }) => {

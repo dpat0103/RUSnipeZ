@@ -1,4 +1,5 @@
 import type { CatalogCourse, CatalogSection, HistorySummary } from "../api/types";
+import { OFF_CAMPUS_NAMES } from "../lib/config";
 import { meetingLabels, meetingPlaces, nameCase, plural, timeAgo } from "../lib/format";
 import { useDemo } from "../demo/context";
 import { SectionDetail } from "./SectionDetail";
@@ -75,7 +76,8 @@ function SectionItem({
   const watching = useDemo().isWatched(section.index);
   const isExpanded = expandedSection === section.index;
   const status = open ? (isOpen ? "open" : "closed") : "unknown";
-  const places = meetingPlaces(section.meets);
+  // Off-campus meetings use the host college's building codes; name the location instead.
+  const places = OFF_CAMPUS_NAMES[section.campus] ?? meetingPlaces(section.meets);
 
   return (
     <li className="section" data-status={status} data-highlight={highlight === section.index || undefined}>
