@@ -14,12 +14,13 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import delete
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from rusnipez.catalog.build import build_payload
-from rusnipez.db.models import Catalog, Section, TermRow
+from rusnipez.db.models import Catalog, Opening, Section, TermRow
+from rusnipez.settings import OFF_CAMPUS, OFF_CAMPUS_LOCATIONS
 from rusnipez.soc.client import SocClient
 from rusnipez.soc.normalize import normalize_catalog
 from rusnipez.soc.term import Term
@@ -34,7 +35,7 @@ MIN_SECTIONS_FOR_CHECK = 100
 
 @dataclass(frozen=True, slots=True)
 class SyncResult:
-    status: str  # updated | unchanged | rejected
+    status: str  # updated | unchanged | rejected | empty
     sections: int
 
 
@@ -137,10 +138,49 @@ async def store_catalog(
     return SyncResult("updated", counts["sections"])
 
 
+def merge_courses(courses: list[dict]) -> list[dict]:
+    """Combine one course listed at several locations into a single entry."""
+    merged: dict[str, dict] = {}
+    for course in courses:
+        if course["code"] not in merged:
+            merged[course["code"]] = {**course, "sections": list(course["sections"])}
+            continue
+        sections = merged[course["code"]]["sections"]
+        seen = {section["index"] for section in sections}
+        sections.extend(s for s in course["sections"] if s["index"] not in seen)
+    for course in merged.values():
+        course["sections"].sort(key=lambda s: (s["number"], s["index"]))
+    return sorted(merged.values(), key=lambda c: c["code"])
+
+
+async def fetch_courses(client: SocClient, term: Term, campus: str) -> list[dict]:
+    """Normalized courses for a campus, or for every off-campus location together."""
+    if campus != OFF_CAMPUS:
+        return normalize_catalog(await client.courses(term, campus))
+    raw = []
+    for location in OFF_CAMPUS_LOCATIONS:
+        raw.extend(await client.courses(term, location, allow_empty=True))
+    return merge_courses(normalize_catalog(raw))
+
+
+async def count_unlisted_open(session: AsyncSession, term: str) -> int:
+    """Open sections that no catalog names: new, unpublished, or at an unknown location."""
+    return await session.scalar(
+        select(func.count())
+        .select_from(Opening)
+        .outerjoin(Section, (Section.term == Opening.term) & (Section.index == Opening.index))
+        .where(Opening.term == term, Opening.closed_at.is_(None), Section.index.is_(None))
+    )
+
+
 async def sync_catalog(
     sessions: async_sessionmaker, client: SocClient, term: Term, campus: str
 ) -> SyncResult:
-    raw = await client.courses(term, campus)
-    result = await store_catalog(sessions, term, campus, normalize_catalog(raw))
+    courses = await fetch_courses(client, term, campus)
+    if not courses:
+        # Only off-campus can be empty; the main campuses raise instead.
+        log.info("catalog %s %s: no classes this term", term.code, campus)
+        return SyncResult("empty", 0)
+    result = await store_catalog(sessions, term, campus, courses)
     log.info("catalog %s %s: %s (%d sections)", term.code, campus, result.status, result.sections)
     return result

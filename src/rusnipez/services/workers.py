@@ -9,10 +9,10 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from rusnipez.services.catalog import ensure_terms, sync_catalog
+from rusnipez.services.catalog import count_unlisted_open, ensure_terms, sync_catalog
 from rusnipez.services.poller import TermPoller
 from rusnipez.services.reports import prune_polls
-from rusnipez.settings import CAMPUSES, Settings
+from rusnipez.settings import CATALOGS, Settings
 from rusnipez.soc.client import SocClient, SocError
 from rusnipez.soc.term import Term
 
@@ -22,11 +22,15 @@ log = logging.getLogger(__name__)
 async def refresh_catalogs(sessions: async_sessionmaker, terms: list[Term]) -> None:
     async with SocClient() as client:
         for term in terms:
-            for campus in CAMPUSES:
+            for campus in CATALOGS:
                 try:
                     await sync_catalog(sessions, client, term, campus)
                 except SocError as error:
                     log.warning("catalog %s %s failed: %s", term.code, campus, error)
+            # A jump here means Rutgers added a location or changed its catalog.
+            async with sessions() as session:
+                unlisted = await count_unlisted_open(session, term.code)
+            log.info("catalog %s: %d open sections are in no catalog", term.code, unlisted)
 
 
 async def catalog_loop(sessions: async_sessionmaker, terms: list[Term], hours: float) -> None:

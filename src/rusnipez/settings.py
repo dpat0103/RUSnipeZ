@@ -13,6 +13,29 @@ from rusnipez.soc.term import Term
 
 CAMPUSES = ("NB", "NK", "CM")
 
+# Rutgers also teaches at partner colleges and bases. Each is its own campus
+# code in courses.json, while openSections.json covers them all, so without
+# these their sections open and close with no name. The list is the Schedule
+# of Classes' own (classes.rutgers.edu/soc/js/soc_utils.js, campus type 3).
+# Most terms use only a few, so they are synced together as one catalog.
+OFF_CAMPUS = "OC"
+OFF_CAMPUS_LOCATIONS = {
+    "B": "Burlington County Community College - Mt Laurel",
+    "CC": "Camden County College - Blackwood Campus",
+    "H": "County College of Morris",
+    "CU": "Cumberland County College",
+    "MC": "Denville - RU-Morris",
+    "WM": "Freehold WMHEC - RU-BCC",
+    "L": "Lincroft - RU-BCC",
+    "AC": "Mays Landing - RU-ACCC",
+    "J": "McGuire-Dix-Lakehurst RU-JBMDL",
+    "D": "Mercer County Community College",
+    "RV": "North Branch - RU-RVCC",
+}
+
+# Every catalog the service keeps per term.
+CATALOGS = (*CAMPUSES, OFF_CAMPUS)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="RUSNIPEZ_", env_file=".env", extra="ignore")

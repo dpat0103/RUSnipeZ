@@ -109,16 +109,20 @@ class SocClient:
             raise SocError("openSections.json returned an index that is not five digits")
         return indexes
 
-    async def courses(self, term: Term, campus: str | None = None) -> list[dict[str, Any]]:
+    async def courses(
+        self, term: Term, campus: str | None = None, *, allow_empty: bool = False
+    ) -> list[dict[str, Any]]:
         """Return the full catalogue for the term and campus.
 
         ``subject`` is required by the endpoint but ignored by it; any value
-        returns the whole campus catalogue.
+        returns the whole campus catalogue. An empty catalogue means a broken
+        response for a main campus, but is normal for an off-campus location
+        with no classes this term, hence ``allow_empty``.
         """
         params = term.soc_params(campus or self.campus) | {"subject": "198"}
         data = await self._get_json("/courses.json", params)
         if not isinstance(data, list):
             raise SocError(f"courses.json returned {type(data).__name__}, expected list")
-        if not data:
+        if not data and not allow_empty:
             raise SocError(f"courses.json returned an empty catalogue for {term}")
         return data
