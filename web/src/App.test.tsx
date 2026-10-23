@@ -43,6 +43,26 @@ const events: Events = {
       courseTitle: "INTRODUCTION TO COMPUTER SCIENCE",
       sectionNumber: "41",
     },
+    {
+      kind: "closed",
+      index: "26181",
+      at: "2026-11-16T14:05:00Z",
+      precise: true,
+      campus: "CM",
+      courseCode: "50:014:340",
+      courseTitle: "CIVIL RIGHTS MOVEMENT",
+      sectionNumber: "01",
+    },
+    {
+      kind: "closed",
+      index: "26188",
+      at: "2026-11-16T14:04:00Z",
+      precise: true,
+      campus: null,
+      courseCode: null,
+      courseTitle: null,
+      sectionNumber: null,
+    },
   ],
 };
 
@@ -138,6 +158,10 @@ const ROUTES: [RegExp, () => unknown][] = [
   [/\/api\/v1\/terms\/12027\/open$/, () => openBody],
   [/\/api\/v1\/terms\/12027\/history$/, () => history],
   [/\/api\/v1\/terms\/12027\/sections\/25628$/, () => section],
+  [
+    /\/api\/v1\/terms\/12027\/sections\/26188$/,
+    () => ({ ...section, index: "26188", courseCode: null, courseTitle: null, sectionNumber: null, instructors: null, campus: null }),
+  ],
   [/\/api\/v1\/terms\/12027\/catalogs\/NB$/, () => catalogBody],
 ];
 
@@ -188,6 +212,24 @@ describe("live page", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Live · checked 0s ago");
     expect(screen.getByText(/^Across Spring 2027 and Winter 2027, all campuses · 42 openings recorded since/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "25627" })).toHaveAttribute("href", "/search?q=25627&term=12027");
+  });
+});
+
+describe("sections Rutgers has not listed", () => {
+  it("are labeled in the feed, and feed links open the section's own campus", async () => {
+    renderAt("/");
+    const feed = within(await screen.findByRole("region", { name: /Latest changes/ }));
+    expect(await feed.findByText("Not in Rutgers' public schedule yet")).toBeInTheDocument();
+    expect(feed.getByRole("link", { name: "26181" })).toHaveAttribute(
+      "href",
+      "/search?q=26181&term=12027&campus=CM",
+    );
+  });
+
+  it("explain themselves when searched by index", async () => {
+    renderAt("/search?q=26188");
+    expect(await screen.findByText("Index 26188 is not in Rutgers' public schedule")).toBeInTheDocument();
+    expect(screen.getByText(/Rutgers marks new sections open before listing them/)).toBeInTheDocument();
   });
 });
 

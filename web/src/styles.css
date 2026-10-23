@@ -1659,6 +1659,27 @@ a.index:hover {
   font-size: 14px;
 }
 
+.unlisted {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--spn);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.unlisted p {
+  max-width: 70ch;
+  margin: 0;
+  color: var(--text-2);
+}
+
+.unlisted .pill {
+  min-width: 0;
+}
+
 .results {
   display: flex;
   flex-direction: column;

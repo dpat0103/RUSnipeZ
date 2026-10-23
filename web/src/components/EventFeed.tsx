@@ -6,6 +6,13 @@ import { useNow } from "../lib/hooks";
 
 const key = (event: SeatEvent) => `${event.kind}-${event.index}-${event.at}`;
 
+/** Search for the index on the campus it belongs to; New Brunswick is the page's default. */
+function searchFor(event: SeatEvent, term: string): string {
+  const params = new URLSearchParams({ q: event.index, term });
+  if (event.campus && event.campus !== "NB") params.set("campus", event.campus);
+  return `?${params}`;
+}
+
 export function EventFeed({ events, term }: { events: SeatEvent[]; term: string }) {
   const now = useNow();
 
@@ -33,14 +40,13 @@ export function EventFeed({ events, term }: { events: SeatEvent[]; term: string 
                 </span>
               </>
             ) : (
-              <span className="feed-title">Section not in the current catalog</span>
+              <>
+                <span className="feed-title">Not in Rutgers&apos; public schedule yet</span>
+                <span className="feed-meta">Usually a new section; its details appear once Rutgers lists it</span>
+              </>
             )}
           </span>
-          <Link
-            className="index"
-            to={{ pathname: "/search", search: `?q=${event.index}&term=${term}` }}
-            title="Show this section"
-          >
+          <Link className="index" to={{ pathname: "/search", search: searchFor(event, term) }} title="Show this section">
             {event.index}
           </Link>
           <time
