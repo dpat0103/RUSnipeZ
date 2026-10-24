@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from rusnipez.services.catalog import count_unlisted_open, ensure_terms, sync_catalog
 from rusnipez.services.poller import TermPoller
 from rusnipez.services.reports import prune_polls
+from rusnipez.services.watches import prune_inactive_watches
 from rusnipez.settings import CATALOGS, Settings
 from rusnipez.soc.client import SocClient, SocError
 from rusnipez.soc.term import Term
@@ -42,15 +43,20 @@ async def catalog_loop(sessions: async_sessionmaker, terms: list[Term], hours: f
         await asyncio.sleep(hours * 3600)
 
 
-async def prune_loop(sessions: async_sessionmaker, retention_days: int) -> None:
+async def prune_loop(
+    sessions: async_sessionmaker, retention_days: int, active_terms: list[str]
+) -> None:
     while True:
         try:
             async with sessions.begin() as session:
                 removed = await prune_polls(
                     session, datetime.now(UTC) - timedelta(days=retention_days)
                 )
+                ended = await prune_inactive_watches(session, active_terms)
             if removed:
                 log.info("pruned %d old poll rows", removed)
+            if ended:
+                log.info("removed %d watches for terms no longer polled", ended)
         except Exception:
             log.exception("poll pruning crashed")
         await asyncio.sleep(3600)
@@ -67,4 +73,6 @@ async def run_workers(sessions: async_sessionmaker, settings: Settings) -> None:
         for term in terms:
             group.create_task(TermPoller(sessions, client, term, settings).run())
         group.create_task(catalog_loop(sessions, terms, settings.catalog_refresh_hours))
-        group.create_task(prune_loop(sessions, settings.poll_log_retention_days))
+        group.create_task(
+            prune_loop(sessions, settings.poll_log_retention_days, settings.active_terms)
+        )

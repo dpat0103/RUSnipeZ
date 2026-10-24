@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     change_guard_minimum: int = 50
     change_guard_confirm_seconds: float = 120.0
 
+    # Per user per term. Generous for a full course load, small enough that
+    # nobody hoards popular sections.
+    watch_limit: int = 15
+
     catalog_refresh_hours: float = 6.0
     poll_log_retention_days: int = 14
 
