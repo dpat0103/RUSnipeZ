@@ -42,8 +42,9 @@ export const DAYS = [
   ["F", "Fri"],
 ] as const;
 
-/** Set at build time. Without it the site explains that the bot is coming. */
-export const DISCORD_INVITE: string | undefined = import.meta.env.VITE_DISCORD_INVITE || undefined;
+/** The community server's permanent invite. VITE_DISCORD_INVITE overrides it at build time. */
+export const DISCORD_INVITE: string | undefined =
+  import.meta.env.VITE_DISCORD_INVITE || "https://discord.gg/7cuCT2jJR6";
 
 export const GITHUB_URL = "https://github.com/dpat0103/RUSnipeZ";
 

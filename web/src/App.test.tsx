@@ -219,6 +219,10 @@ describe("live page", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Live · checked 0s ago");
     expect(screen.getByText(/^Across Spring 2027 and Winter 2027, all campuses · 42 openings recorded since/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "25627" })).toHaveAttribute("href", "/search?q=25627&term=12027");
+    expect(screen.getByRole("link", { name: "Join the Discord" })).toHaveAttribute(
+      "href",
+      "https://discord.gg/7cuCT2jJR6",
+    );
   });
 });
 
