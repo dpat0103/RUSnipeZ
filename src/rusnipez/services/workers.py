@@ -1,5 +1,5 @@
-"""Long-running jobs started with the API: one poller per term, catalog refresh
-and poll-log pruning."""
+"""Long-running jobs started with the API: one poller per term, catalog refresh,
+pruning and, when configured, the Discord bot."""
 
 from __future__ import annotations
 
@@ -76,3 +76,9 @@ async def run_workers(sessions: async_sessionmaker, settings: Settings) -> None:
         group.create_task(
             prune_loop(sessions, settings.poll_log_retention_days, settings.active_terms)
         )
+        if settings.discord_token is not None:
+            from rusnipez.bot.client import run_bot
+
+            group.create_task(run_bot(sessions, settings))
+        else:
+            log.info("no Discord token; running without the bot")

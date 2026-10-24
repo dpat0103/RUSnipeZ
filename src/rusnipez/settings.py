@@ -6,7 +6,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from rusnipez.soc.term import Term
@@ -64,6 +64,15 @@ class Settings(BaseSettings):
     # nobody hoards popular sections.
     watch_limit: int = 15
 
+    # Discord. Without a token the service runs without the bot. The bot works
+    # in one server only: it registers commands there and leaves any other.
+    discord_token: SecretStr | None = None
+    discord_guild_id: int | None = None
+    discord_application_id: int | None = None
+    discord_owner_ids: Annotated[list[int], NoDecode] = []
+    # Brand-new accounts are the cheap way around the watch limit.
+    discord_min_account_age_days: int = 7
+
     catalog_refresh_hours: float = 6.0
     poll_log_retention_days: int = 14
 
@@ -76,6 +85,19 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             value = [part.strip() for part in value.split(",") if part.strip()]
         return value
+
+    @field_validator("discord_owner_ids", mode="before")
+    @classmethod
+    def _split_owner_ids(cls, value: object) -> object:
+        if isinstance(value, str):
+            value = [part.strip() for part in value.split(",") if part.strip()]
+        return value
+
+    # Compose passes unset variables as empty strings.
+    @field_validator("discord_token", "discord_guild_id", "discord_application_id", mode="before")
+    @classmethod
+    def _empty_is_unset(cls, value: object) -> object:
+        return None if value == "" else value
 
     @field_validator("active_terms")
     @classmethod
