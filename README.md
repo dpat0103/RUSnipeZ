@@ -12,9 +12,9 @@
 
 ---
 
-> **v3 in progress.** This branch rebuilds RU SnipeZ around one always-on service. The
-> detection engine, API and website are done; the Discord bot is next. See the
-> [v3 plan](docs/v3-plan.md).
+> **Live.** Join the [Discord server](https://discord.gg/7cuCT2jJR6) to get alerts, or browse
+> the live feed and seat history at [ru-snipez.vercel.app](https://ru-snipez.vercel.app).
+> Background and decisions are in the [v3 plan](docs/v3-plan.md).
 
 ## The problem
 
@@ -23,8 +23,8 @@ When a student drops, the seat goes to whoever refreshes WebReg first. RU SnipeZ
 refreshing and tells you when to act.
 
 It started as a Discord bot that shipped to a real student community: `/snipe 10052` to watch
-an index, a DM with a **Register** button when it opened. The original is archived in
-[`legacy/v1/`](legacy/v1/).
+an index, a DM with a **Register** button when it opened. v3 rebuilds it around one always-on
+service; the original is archived in [`legacy/v1/`](legacy/v1/).
 
 <p align="center">
   <img src="docs/screenshots/snipe_command.png" width="49%" alt="Setting a watch with /snipe">
@@ -36,11 +36,13 @@ an index, a DM with a **Register** button when it opened. The original is archiv
 ```
                 ┌──────────── rusnipez service (one Python process) ─────────────┐
  courses.json ─►│ catalog sync (6h) ──► catalogs + sections                       │
- openSections ─►│ poller (30s) ─► diff ─► change guard ─► openings (PostgreSQL)   │
+ openSections ─►│ poller (30s) ─► diff ─► change guard ─► openings + alerts       │
+                │ dispatcher (LISTEN alerts) ──────────────► Discord DMs          │
+                │ Discord bot: slash commands, buttons, live channels             │
                 │ FastAPI read API: /api/v1/...                                   │
                 └─────────────────────────────────────────────────────────────────┘
                               ▲                                ▲
-                  React website (live feed, search)    Discord bot (next)
+                  React website (live feed, search)    Discord server
 ```
 
 - **One shared check.** Rutgers publishes every open section index in one response, cached for
@@ -58,6 +60,15 @@ an index, a DM with a **Register** button when it opened. The original is archiv
   this check), so times are accurate to about 30 seconds and the API marks anything less
   certain. Sections already open when tracking began never count as openings.
 - **Restart-safe.** The open set lives in the database, so a restart resumes where it left off.
+- **Alerts that are never lost or doubled.** The poll that records an opening also queues one
+  alert per watcher, in the same transaction, then sends a PostgreSQL `NOTIFY`. A dispatcher
+  wakes on it, leases the alerts and sends the DMs, retrying with backoff; a unique (watch,
+  opening) key means nobody is alerted twice. Median time from the check that saw the seat
+  open to the DM is about a second.
+- **A bot with guardrails.** `/snipe` (with autocomplete), `/check`, `/remove`, `/clear`,
+  `/lastopen` and `/course`; 15 watches per person per term, enforced under concurrent
+  commands; alerts fall back to a private thread when DMs are closed. The bot works in one
+  server only, and that server's channels are applied from code (`rusnipez discord-setup`).
 
 ## What it never does
 
@@ -68,7 +79,7 @@ index filled in, and the student signs in through CAS themselves.
 
 | Layer | Choice |
 |---|---|
-| Service | Python 3.12, asyncio, FastAPI, httpx |
+| Service | Python 3.12, asyncio, FastAPI, httpx, discord.py |
 | Data | PostgreSQL 17, SQLAlchemy 2 (async), Alembic |
 | Website | React 19, TypeScript, Vite, TanStack Query, React Router |
 | Tests | pytest against real PostgreSQL; Vitest and Testing Library |
@@ -79,7 +90,8 @@ src/rusnipez/
   core/       pure detection logic: set difference, change guard
   soc/        Rutgers API client, payload normalizer, term codes
   catalog/    catalog payload builder
-  services/   poller, catalog sync, read queries, background workers
+  services/   poller, catalog sync, watches, alert outbox, read queries, workers
+  bot/        Discord client, commands, alert delivery, server layout
   db/         models and migrations
   api/        FastAPI app, routes, response schemas
 web/          React website
@@ -110,7 +122,8 @@ Open <http://localhost:5173>. To run the service in a container instead, use
 `docker compose up -d --build`.
 
 The active terms are one setting, `RUSNIPEZ_ACTIVE_TERMS` (default `12027,02027`: Spring and
-Winter 2027). See [`.env.example`](.env.example) and
+Winter 2027). The bot starts only when `RUSNIPEZ_DISCORD_TOKEN` and the server ID are set;
+without them the service runs as before. See [`.env.example`](.env.example) and
 [`settings.py`](src/rusnipez/settings.py).
 
 ## Tests
