@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import discord
+
+from rusnipez.soc.term import Term
 
 SITE_URL = "https://ru-snipez.vercel.app"
 
@@ -98,3 +100,151 @@ def how_to_embed(watch_limit: int) -> discord.Embed:
         inline=False,
     )
     return embed
+
+
+def webreg_url(term: str, index: str) -> str:
+    return (
+        "https://sims.rutgers.edu/webreg/editSchedule.htm"
+        f"?login=cas&semesterSelection={term}&indexList={index}"
+    )
+
+
+def name_case(instructors: str | None) -> str:
+    """Rutgers' upper-case names, such as DOE, JANE, as Doe, Jane."""
+    if not instructors:
+        return "TBA"
+    return instructors.title()
+
+
+def term_name(term: str) -> str:
+    return str(Term.parse(term))
+
+
+def _section_fields(
+    embed: discord.Embed,
+    *,
+    index: str,
+    course_code: str | None,
+    section_number: str | None,
+    instructors: str | None,
+    spn: bool = False,
+) -> None:
+    embed.add_field(name="Index", value=f"`{index}`")
+    if course_code:
+        embed.add_field(name="Section", value=f"{course_code} · Sec {section_number}")
+    embed.add_field(name="Instructor", value=name_case(instructors))
+    if spn:
+        embed.add_field(name="Heads up", value="Needs a special permission number", inline=False)
+
+
+def register_button(term: str, index: str) -> discord.ui.Button:
+    return discord.ui.Button(label="Register", url=webreg_url(term, index))
+
+
+def snipe_embed(
+    result: str,
+    *,
+    term: str,
+    index: str,
+    title: str | None,
+    course_code: str | None,
+    section_number: str | None,
+    instructors: str | None,
+    spn: bool,
+    open_now: bool,
+    count: int,
+    limit: int,
+) -> discord.Embed:
+    if result == "duplicate":
+        return discord.Embed(title=f"You are already watching {index}.", colour=WARN)
+    if result == "limit":
+        return discord.Embed(
+            title=f"You can watch up to {limit} sections per term.",
+            description="Remove one with /remove first.",
+            colour=ERROR,
+        )
+    if result == "unknown":
+        return discord.Embed(title=f"Could not find section {index}.", colour=ERROR)
+    if result == "banned":
+        return discord.Embed(title="This account cannot add watches.", colour=ERROR)
+    name = title or f"Section {index}"
+    embed = discord.Embed(
+        title=f"{name} is open right now" if open_now else f"Now watching {name}",
+        colour=OPEN if open_now else INFO,
+    )
+    _section_fields(
+        embed,
+        index=index,
+        course_code=course_code,
+        section_number=section_number,
+        instructors=instructors,
+        spn=spn,
+    )
+    hint = (
+        "Register now, or keep watching for the next opening"
+        if open_now
+        else "You will get a DM the moment it opens"
+    )
+    embed.set_footer(text=f"{term_name(term)} · {hint} · {count}/{limit} watches")
+    return embed
+
+
+def check_embed(rows: list, limit: int) -> discord.Embed:
+    if not rows:
+        return discord.Embed(
+            title="You are not watching anything.",
+            description="Add a section with /snipe.",
+            colour=MUTED,
+        )
+    embed = discord.Embed(title=f"Your snipe list ({len(rows)})", colour=INFO)
+    lines = []
+    for row in rows:
+        dot = "🟢" if row.open else "⚪"
+        what = (
+            f"{row.course_title} · Sec {row.section_number}"
+            if row.course_title
+            else "Not listed by Rutgers yet"
+        )
+        state = "Open" if row.open else "Closed"
+        snoozed = " · snoozed" if row.snoozed_until and row.snoozed_until > _now() else ""
+        lines.append(f"{dot} `{row.index}` {what} · {state}{snoozed}")
+    embed.description = "\n".join(lines)
+    embed.set_footer(text=f"Up to {limit} per term")
+    return embed
+
+
+def removed_embed(index: str, removed: bool) -> discord.Embed:
+    if not removed:
+        return discord.Embed(title=f"{index} is not on your list.", colour=WARN)
+    return discord.Embed(title=f"Stopped watching {index}", colour=MUTED)
+
+
+def clear_prompt_embed(count: int) -> discord.Embed:
+    if count == 0:
+        return discord.Embed(title="Your list is already empty.", colour=MUTED)
+    what = "your 1 section" if count == 1 else f"all {count} sections"
+    return discord.Embed(title=f"Stop watching {what}?", colour=WARN)
+
+
+def alert_embed(job) -> discord.Embed:
+    name = job.course_title or f"Section {job.index}"
+    embed = discord.Embed(
+        title=f"{name} is open",
+        colour=OPEN,
+        url=webreg_url(job.term, job.index),
+        timestamp=job.opened_at,
+    )
+    _section_fields(
+        embed,
+        index=job.index,
+        course_code=job.course_code,
+        section_number=job.section_number,
+        instructors=job.instructors,
+        spn=job.spn,
+    )
+    embed.set_footer(text=term_name(job.term))
+    return embed
+
+
+def _now() -> datetime:
+    return datetime.now(UTC)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from urllib.parse import parse_qs, urlparse
 
 import discord
@@ -96,3 +97,66 @@ def test_empty_discord_settings_mean_no_bot() -> None:
     assert settings.discord_token is None
     assert settings.discord_guild_id is None
     assert settings.discord_owner_ids == []
+
+
+def test_account_age_comes_from_the_discord_id() -> None:
+    from rusnipez.bot.commands import account_age
+
+    # The owner's account dates from June 2017.
+    assert account_age(324357073695408148, T0).days > 3000
+    brand_new = discord.utils.time_snowflake(T0 - timedelta(hours=1))
+    assert account_age(brand_new, T0) < timedelta(days=7)
+
+
+def test_alert_embed_and_buttons() -> None:
+    from rusnipez.bot.alerts import alert_view
+    from rusnipez.services.alerts import AlertJob
+
+    job = AlertJob(
+        id=7,
+        watch_id=3,
+        user_id=1,
+        attempts=1,
+        term="12027",
+        index="10001",
+        opened_at=T0,
+        course_code="01:198:111",
+        course_title="INTRO COMPUTER SCI",
+        section_number="01",
+        instructors="DOE, JANE",
+        spn=True,
+        identities=(("discord", "1"),),
+    )
+    embed = embeds.alert_embed(job)
+    assert embed.title == "INTRO COMPUTER SCI is open"
+    fields = {field.name: field.value for field in embed.fields}
+    assert fields["Instructor"] == "Doe, Jane"
+    assert "Heads up" in fields
+    view = alert_view(job)
+    register, *actions = view.children
+    assert "indexList=10001" in register.url and "semesterSelection=12027" in register.url
+    assert [b.custom_id for b in actions] == [
+        "alert:snoozed:3:7",
+        "alert:stopped:3:7",
+        "alert:got_in:3:7",
+    ]
+
+
+def test_snipe_replies() -> None:
+    common = dict(
+        term="12027",
+        index="10001",
+        title="INTRO COMPUTER SCI",
+        course_code="01:198:111",
+        section_number="01",
+        instructors=None,
+        spn=False,
+        count=2,
+        limit=15,
+    )
+    added = embeds.snipe_embed("added", open_now=False, **common)
+    assert added.title == "Now watching INTRO COMPUTER SCI"
+    assert "2/15 watches" in added.footer.text
+    assert embeds.snipe_embed("added", open_now=True, **common).colour == embeds.OPEN
+    assert embeds.snipe_embed("limit", open_now=False, **common).colour == embeds.ERROR
+    assert "already" in embeds.snipe_embed("duplicate", open_now=False, **common).title

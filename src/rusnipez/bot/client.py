@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import UTC, datetime
 
 import discord
 from discord import app_commands
-from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy import exists, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from rusnipez.bot import embeds
+from rusnipez.bot import commands, embeds
+from rusnipez.bot.alerts import AlertButton, DiscordNotifier
+from rusnipez.db.models import Opening
 from rusnipez.services import reports
+from rusnipez.services.alerts import Dispatcher
 from rusnipez.settings import Settings
 
 log = logging.getLogger(__name__)
@@ -44,7 +49,29 @@ class SnipeBot(discord.Client):
         # None is a DM: alert buttons live there.
         return interaction.guild_id in (None, self.guild.id)
 
+    async def section_details(self, session: AsyncSession, term: str, index: str) -> dict:
+        """What the snipe reply shows about a section, listed or not."""
+        section = await reports.section_info(session, term, index)
+        open_now = await session.scalar(
+            select(
+                exists().where(
+                    Opening.term == term, Opening.index == index, Opening.closed_at.is_(None)
+                )
+            )
+        )
+        return {
+            "title": section.course_title if section else None,
+            "course_code": section.course_code if section else None,
+            "section_number": section.section_number if section else None,
+            "instructors": section.instructors if section else None,
+            "spn": section.spn if section else False,
+            "open_now": bool(open_now),
+        }
+
     def _register(self) -> None:
+        commands.register(self)
+        self.add_dynamic_items(AlertButton)
+
         @self.tree.command(name="help", description="Every RU SnipeZ command.", guild=self.guild)
         async def help_(interaction: discord.Interaction) -> None:
             await interaction.response.send_message(embed=embeds.help_embed(), ephemeral=True)
@@ -109,6 +136,13 @@ class SnipeBot(discord.Client):
 
 
 async def run_bot(sessions: async_sessionmaker, settings: Settings) -> None:
+    """The bot, and the dispatcher that sends its alerts once it is connected."""
     bot = SnipeBot(sessions, settings)
-    async with bot:
-        await bot.start(settings.discord_token.get_secret_value())
+
+    async def dispatch() -> None:
+        await bot.wait_until_ready()
+        await Dispatcher(sessions, [DiscordNotifier(bot)]).run(settings.database_url)
+
+    async with bot, asyncio.TaskGroup() as group:
+        group.create_task(bot.start(settings.discord_token.get_secret_value()))
+        group.create_task(dispatch())

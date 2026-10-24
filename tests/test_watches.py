@@ -151,3 +151,54 @@ async def test_watches_end_with_their_term(sessions) -> None:
         assert await watches.prune_inactive_watches(session, ["12027"]) == 1
     async with sessions() as session:
         assert await session.scalar(select(Watch.term)) == "12027"
+
+
+async def test_find_sections_by_index_code_or_title(sessions) -> None:
+    async with sessions.begin() as session:
+        session.add_all(
+            [
+                section("10001", "01:198:111"),
+                section("10002", "01:640:151"),
+                section("10003", "01:198:111", term="02027"),
+            ]
+        )
+    async with sessions() as session:
+        by_index = await watches.find_sections(session, TERMS, "1000")
+        by_code = await watches.find_sections(session, TERMS, "198:111")
+        by_title = await watches.find_sections(session, TERMS, "computer")
+    assert [m.index for m in by_index] == ["10001", "10002", "10003"]
+    # The first active term comes first.
+    assert [(m.term, m.index) for m in by_code] == [("12027", "10001"), ("02027", "10003")]
+    assert len(by_title) == 3
+
+
+async def test_resolve_a_typed_index_or_an_autocomplete_value(sessions) -> None:
+    async with sessions.begin() as session:
+        session.add_all([section("10001", term="02027"), section("10002")])
+    async with sessions() as session:
+        assert await watches.resolve_section(session, TERMS, "10001") == ("02027", "10001")
+        assert await watches.resolve_section(session, TERMS, "12027:10002") == ("12027", "10002")
+        assert await watches.resolve_section(session, TERMS, "99999") is None
+        assert await watches.resolve_section(session, TERMS, "19999:10002") is None
+        assert await watches.resolve_section(session, TERMS, "cs 111") is None
+
+
+async def test_the_first_answer_to_an_alert_counts(sessions) -> None:
+    from rusnipez.db.models import Alert
+
+    await seed_sections(sessions, "10001")
+    user = await new_user(sessions)
+    await add(sessions, user, "10001")
+    async with sessions.begin() as session:
+        opening = Opening(term="12027", index="10001", opened_at=T0)
+        session.add(opening)
+        await session.flush()
+        alert = Alert(watch_id=1, opening_id=opening.id)
+        session.add(alert)
+        await session.flush()
+        await watches.record_action(session, alert.id, "got_in", T0)
+        await watches.record_action(session, alert.id, "snoozed", T0 + timedelta(minutes=1))
+        assert await watches.remove_watch_by_id(session, user.id, 1)
+    async with sessions() as session:
+        stored = await session.get_one(Alert, alert.id)
+    assert (stored.action, stored.acted_at, stored.watch_id) == ("got_in", T0, None)

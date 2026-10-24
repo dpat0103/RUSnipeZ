@@ -48,14 +48,16 @@ async def test_an_identity_belongs_to_one_user(sessions) -> None:
             session.add(Identity(user_id=user.id, provider="discord", subject="1001"))
 
 
-async def test_deleting_a_user_deletes_their_data(sessions) -> None:
+async def test_deleting_a_user_deletes_their_data_but_not_delivery_counts(sessions) -> None:
     async with sessions.begin() as session:
         user, watch, opening = await add_watcher(session)
         session.add(Alert(watch_id=watch.id, opening_id=opening.id, status="sent", sent_at=T0))
     async with sessions.begin() as session:
         await session.delete(await session.get(User, user.id))
     async with sessions() as session:
-        for model in (Identity, Watch, Alert):
+        for model in (Identity, Watch):
             assert await session.scalar(select(func.count()).select_from(model)) == 0
-        # Seat history is not personal data and stays.
+        # Seat history and delivery counts are not personal data and stay, unlinked.
         assert await session.scalar(select(func.count()).select_from(Opening)) == 1
+        alert = await session.scalar(select(Alert))
+        assert (alert.watch_id, alert.status) == (None, "sent")

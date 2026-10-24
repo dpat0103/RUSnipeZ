@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from rusnipez.services.alerts import drop_orphaned
 from rusnipez.services.catalog import count_unlisted_open, ensure_terms, sync_catalog
 from rusnipez.services.poller import TermPoller
 from rusnipez.services.reports import prune_polls
@@ -53,6 +54,7 @@ async def prune_loop(
                     session, datetime.now(UTC) - timedelta(days=retention_days)
                 )
                 ended = await prune_inactive_watches(session, active_terms)
+                await drop_orphaned(session)
             if removed:
                 log.info("pruned %d old poll rows", removed)
             if ended:

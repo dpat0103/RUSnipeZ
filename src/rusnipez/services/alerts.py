@@ -59,6 +59,16 @@ async def queue_alerts(session: AsyncSession, opening_ids: Sequence[int], now: d
     return queued.rowcount
 
 
+async def drop_orphaned(session: AsyncSession) -> int:
+    """Pending alerts whose watch was removed before they were sent."""
+    dropped = await session.execute(
+        update(Alert)
+        .where(Alert.status == "pending", Alert.watch_id.is_(None))
+        .values(status="failed", error="watch removed")
+    )
+    return dropped.rowcount
+
+
 @dataclass(frozen=True, slots=True)
 class AlertJob:
     """Everything a notifier needs to send one alert."""
@@ -75,6 +85,8 @@ class AlertJob:
     course_title: str | None
     section_number: str | None
     instructors: str | None
+    # Needs a special permission number to register.
+    spn: bool
     # (provider, subject) for every way to reach the user.
     identities: tuple[tuple[str, str], ...]
 
@@ -140,7 +152,7 @@ class Dispatcher:
                      WHERE a.id = due.id AND w.id = a.watch_id AND o.id = a.opening_id
                  RETURNING a.id, a.watch_id, w.user_id, a.attempts, o.term, o.index,
                            o.opened_at, s.course_code, s.course_title, s.section_number,
-                           s.instructors, w.created_at
+                           s.instructors, coalesce(s.spn, false) AS spn, w.created_at
                 """),
                 {"now": now, "batch": self.batch, "lease_until": now + self.lease},
             )
@@ -157,7 +169,7 @@ class Dispatcher:
                 for user_id, provider, subject in found:
                     identities.setdefault(user_id, []).append((provider, subject))
         return [
-            AlertJob(*row[:11], identities=tuple(identities.get(row.user_id, ())))
+            AlertJob(*row[:12], identities=tuple(identities.get(row.user_id, ())))
             for row in claimed
         ]
 

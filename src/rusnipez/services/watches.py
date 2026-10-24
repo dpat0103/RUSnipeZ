@@ -11,11 +11,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-from sqlalchemy import delete, exists, func, select, update
+from sqlalchemy import case, delete, exists, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rusnipez.db.models import Identity, Opening, Section, User, Watch
+from rusnipez.db.models import Alert, Identity, Opening, Section, User, Watch
 
 AddResult = Literal["added", "duplicate", "limit", "unknown", "banned"]
 
@@ -143,3 +143,74 @@ async def prune_inactive_watches(session: AsyncSession, active_terms: list[str])
     """Watches end with their term: drop those for terms no longer polled."""
     removed = await session.execute(delete(Watch).where(Watch.term.not_in(active_terms)))
     return removed.rowcount
+
+
+async def remove_watch_by_id(session: AsyncSession, user_id: int, watch_id: int) -> bool:
+    removed = await session.execute(
+        delete(Watch).where(Watch.id == watch_id, Watch.user_id == user_id)
+    )
+    return removed.rowcount > 0
+
+
+async def record_action(session: AsyncSession, alert_id: int, action: str, now: datetime) -> None:
+    """What someone did with an alert: snoozed, stopped or got_in. The first
+    answer counts; pressing another button later does not overwrite it."""
+    await session.execute(
+        update(Alert)
+        .where(Alert.id == alert_id, Alert.action.is_(None))
+        .values(action=action, acted_at=now)
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class SectionMatch:
+    term: str
+    index: str
+    course_code: str
+    course_title: str
+    section_number: str
+
+
+async def find_sections(
+    session: AsyncSession, terms: list[str], query: str, limit: int = 25
+) -> list[SectionMatch]:
+    """Sections for autocomplete: by index prefix, course code or title words.
+    Earlier active terms come first."""
+    query = query.strip()
+    filters = []
+    if query.isdigit():
+        filters.append(Section.index.startswith(query))
+    elif query:
+        pattern = f"%{query.replace('%', '').replace('_', '')}%"
+        filters.append(Section.course_code.ilike(pattern) | Section.course_title.ilike(pattern))
+    term_order = case({term: n for n, term in enumerate(terms)}, value=Section.term)
+    rows = await session.execute(
+        select(
+            Section.term,
+            Section.index,
+            Section.course_code,
+            Section.course_title,
+            Section.section_number,
+        )
+        .where(Section.term.in_(terms), *filters)
+        .order_by(term_order, Section.course_code, Section.section_number, Section.index)
+        .limit(limit)
+    )
+    return [SectionMatch(*row) for row in rows]
+
+
+async def resolve_section(
+    session: AsyncSession, terms: list[str], value: str
+) -> tuple[str, str] | None:
+    """A (term, index) from autocomplete's ``term:index`` or a typed index. A
+    typed index belongs to the first active term that has it."""
+    value = value.strip()
+    if ":" in value:
+        term, _, index = value.partition(":")
+        return (term, index) if term in terms and index.isdigit() and len(index) == 5 else None
+    if not (value.isdigit() and len(value) == 5):
+        return None
+    for term in terms:
+        if await section_known(session, term, value):
+            return term, value
+    return None

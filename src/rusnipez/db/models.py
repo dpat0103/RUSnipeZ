@@ -142,6 +142,8 @@ class Identity(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # Set when delivery is refused (closed DMs), cleared on the next success.
     delivery_failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Discord: the private thread alerts go to while DMs are closed.
+    fallback_channel_id: Mapped[int | None] = mapped_column(BigInteger)
 
 
 class Watch(Base):
@@ -164,7 +166,11 @@ class Watch(Base):
 class Alert(Base):
     """Outbox: one row per watcher per opening, written in the same transaction
     as the opening. The unique key makes every opening alert each watcher once,
-    across restarts and retries."""
+    across restarts and retries.
+
+    Alerts outlive their watch: removing a watch (or a user) unlinks its alerts
+    instead of deleting them, so delivery counts and latency stay accurate
+    without keeping anything that identifies a person."""
 
     __tablename__ = "alerts"
     __table_args__ = (
@@ -178,7 +184,7 @@ class Alert(Base):
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    watch_id: Mapped[int] = mapped_column(ForeignKey("watches.id", ondelete="CASCADE"))
+    watch_id: Mapped[int | None] = mapped_column(ForeignKey("watches.id", ondelete="SET NULL"))
     opening_id: Mapped[int] = mapped_column(ForeignKey("openings.id", ondelete="CASCADE"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # pending: waiting to send · sent: delivered · failed: gave up after retries
@@ -189,3 +195,6 @@ class Alert(Base):
     )
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error: Mapped[str | None] = mapped_column(Text)
+    # What the person did with it: snoozed · stopped · got_in
+    action: Mapped[str | None] = mapped_column(String(8))
+    acted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
