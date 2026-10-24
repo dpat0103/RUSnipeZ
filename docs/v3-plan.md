@@ -1,6 +1,7 @@
 # RU SnipeZ v3 plan
 
-Branch: `v3` (long-lived; merged into `main` at cutover). Budget: $0 now, a paid VPS later.
+Live since 22 Oct 2026. Work lands on `main` through short-lived branches and pull requests.
+Budget: $0 now, a paid VPS later.
 
 ## Product
 
@@ -74,19 +75,50 @@ then order by phrase, level and section count. Measured at 0.4 to 3 ms per keyst
 
 ### 3. Discord bot — next
 
-- Same process and database as the poller. Guild commands in the community server.
-- `/snipe <course or index>` with autocomplete, `/check`, `/remove`, `/clear`, `/lastopen`,
-  `/course`, `/help`, `/status`, and owner-only `/admin` commands.
-- Alerts: tables `users`, `watches` and an `alerts` outbox with a unique (watch, opening) key,
-  so each opening alerts each watcher exactly once, across restarts and retries.
-- DM embed with **Register**, **Snooze 1h**, **Stop watching**, **I got in**.
-- Rate-limited dispatcher (oldest watches first) and a private-thread fallback when DMs are
-  closed. Per-user watch limit, proposed at 15.
-- Server channels: `#how-to`, `#bot-commands`, `#live-openings`, `#status`, `#support`, a
-  private admin channel.
+A relaunch on a new server and a new bot application. The old server is left alone: the bot
+registers commands only in the configured server and leaves any other it is added to.
+
+**Watches and alerts (no Discord code):**
+
+- Tables `users`, `identities` (provider and subject, so a user can later also sign in another
+  way), `watches` and `alerts`. Limits count per user: 15 watches per term, Discord accounts at
+  least 7 days old, and a ban flag.
+- One watch service is the only code that changes watches, so every entry point shares the
+  limits.
+- The poller writes an `alerts` row for every watcher in the same transaction as the opening,
+  then sends a PostgreSQL `NOTIFY`. A crash cannot record an opening and lose its alerts, and a
+  unique (watch, opening) key means each opening alerts each watcher exactly once.
+- A dispatcher claims pending alerts (`FOR UPDATE SKIP LOCKED`, oldest watches first) and hands
+  them to notifiers. Discord is the first; the interface leaves room for others.
+
+**The bot:**
+
+- discord.py in the same process as the poller, outbound connections only.
+- The server layout lives in code and `rusnipez discord-setup` applies it, creating or
+  repairing anything missing:
+
+  ```
+  START HERE      #welcome · #how-to · #announcements        (read-only)
+  SNIPING         #bot-commands (slow mode) · #live-openings · #status
+  COMMUNITY       #general · #support · #feedback
+  STAFF (private) #admin-log · #mod
+  Roles: Owner · Mod · Member
+  ```
+
+- `/snipe <index>` with autocomplete, `/check`, `/remove`, `/clear`, `/lastopen`, `/course`,
+  `/help`, `/status`, and owner-only `/admin`, matching the website's Discord preview. Replies
+  are visible only to the person who ran the command.
+- DM embed with **Register**, **Snooze 1h**, **Stop watching** and **I got in**. The buttons
+  keep working across restarts. When DMs are closed, the alert goes to a private thread.
+- `#live-openings` gets one message per poll for watched sections; `#status` is one message the
+  bot keeps current; errors and failed DMs go to `#admin-log`.
 - Public stats gain alerts delivered and median open-to-DM latency.
 
-### 4. Free public hosting
+**Pull requests, in order:** accounts schema · watch service · alert outbox (release 3.1.0) ·
+bot and server setup · watch commands and DM alerts · info commands, live channels and alert
+stats (release 3.2.0).
+
+### 4. Free public hosting — done
 
 - Website: Vercel free tier (`vercel.json` is ready). Add a rewrite of `/api/(.*)` to the
   service's public URL once it exists, so the browser stays same-origin.
@@ -119,12 +151,17 @@ the new build, announce in the Discord server, archive the `history-data` branch
 
 ## Later, not v3
 
-Watching a whole course or core requirement, a paid tier (never charging for faster alerts),
-signing in with Discord on the website, browser notifications.
+- An **Insights** page built on the openings history and anonymous watch counts: the most
+  contested sections, how often a section opens during add/drop, the best hours to be ready.
+- Alerts for students without Discord: sign in on the website with a Rutgers email (a one-time
+  code and link, no passwords) and web push to an installed home-screen app. It needs a domain
+  for email authentication (SPF, DKIM, DMARC), bought before any push subscriptions exist.
+- Watching a whole course or core requirement, and a paid tier (never charging for faster
+  alerts).
 
-## Open decisions
+## Decisions
 
-1. Is the original Discord server and bot application still available, with its token?
-2. Should v1 watch data be migrated? It is likely for old terms.
-3. Watch limit per user (proposed: 15).
-4. Domain: free subdomains now, or buy one when moving to paid hosting?
+1. **Discord:** a new server and bot application. The original server is not reused.
+2. **v1 data:** not migrated. Its watches are for past terms.
+3. **Watch limit:** 15 per user per term.
+4. **Domain:** not needed for the bot. Buy one only before website sign-in.
