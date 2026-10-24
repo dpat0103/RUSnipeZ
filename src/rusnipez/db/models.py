@@ -112,3 +112,80 @@ class Poll(Base):
     opened: Mapped[int] = mapped_column(Integer, default=0)
     closed: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text)
+
+
+class User(Base):
+    """A person who watches sections. Limits and bans count per user, not per
+    identity, so one person signing in two ways still gets one watch limit."""
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    banned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Identity(Base):
+    """One way to reach a user: provider ``discord`` with the Discord user ID as
+    subject. Alerts go to every identity the user has."""
+
+    __tablename__ = "identities"
+    __table_args__ = (
+        Index("uq_identities_subject", "provider", "subject", unique=True),
+        Index("ix_identities_user", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    provider: Mapped[str] = mapped_column(String(16))
+    subject: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Set when delivery is refused (closed DMs), cleared on the next success.
+    delivery_failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Watch(Base):
+    __tablename__ = "watches"
+    __table_args__ = (
+        Index("uq_watches_user_section", "user_id", "term", "index", unique=True),
+        # Finding the watchers of a section that just opened.
+        Index("ix_watches_section", "term", "index"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    term: Mapped[str] = mapped_column(ForeignKey("terms.code"))
+    # No foreign key to sections: Rutgers opens some sections before listing them.
+    index: Mapped[str] = mapped_column(String(5))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Alert(Base):
+    """Outbox: one row per watcher per opening, written in the same transaction
+    as the opening. The unique key makes every opening alert each watcher once,
+    across restarts and retries."""
+
+    __tablename__ = "alerts"
+    __table_args__ = (
+        Index("uq_alerts_watch_opening", "watch_id", "opening_id", unique=True),
+        Index(
+            "ix_alerts_pending",
+            "next_attempt_at",
+            postgresql_where=text("status = 'pending'"),
+        ),
+        Index("ix_alerts_sent", "sent_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    watch_id: Mapped[int] = mapped_column(ForeignKey("watches.id", ondelete="CASCADE"))
+    opening_id: Mapped[int] = mapped_column(ForeignKey("openings.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # pending: waiting to send · sent: delivered · failed: gave up after retries
+    status: Mapped[str] = mapped_column(String(8), server_default="pending")
+    attempts: Mapped[int] = mapped_column(Integer, server_default="0")
+    next_attempt_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error: Mapped[str | None] = mapped_column(Text)

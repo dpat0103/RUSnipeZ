@@ -53,7 +53,10 @@ async def sessions(database_url: str) -> AsyncIterator[async_sessionmaker]:
     engine = create_engine(database_url)
     async with engine.begin() as connection:
         await connection.execute(
-            text("TRUNCATE terms, catalogs, sections, openings, polls RESTART IDENTITY CASCADE")
+            text(
+                "TRUNCATE terms, catalogs, sections, openings, polls, users"
+                " RESTART IDENTITY CASCADE"
+            )
         )
     factory = create_sessionmaker(engine)
     async with factory.begin() as session:
