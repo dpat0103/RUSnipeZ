@@ -31,7 +31,7 @@ function Arrow({ label }: { label?: string }) {
   );
 }
 
-/** Rutgers to service to PostgreSQL, and the two clients reading the API. */
+/** Rutgers to service to PostgreSQL, out to the website and Discord. */
 export function ArchitectureDiagram() {
   return (
     <figure className="diagram-card" aria-label="Architecture diagram">
@@ -56,15 +56,18 @@ export function ArchitectureDiagram() {
           <Node title="Catalog sync" tone="core">
             normalize → gzip → store
           </Node>
+          <Node title="Dispatcher" tag="LISTEN alerts" tone="core">
+            alert outbox → DMs, with retries
+          </Node>
+          <Node title="Discord bot" tone="core">
+            slash commands · buttons · live channels
+          </Node>
           <Node title="FastAPI" tag="read-only" tone="core">
             /api/v1/*
           </Node>
-          <Node title="Discord bot" tag="next" tone="next">
-            watches → alert outbox → DMs
-          </Node>
           <div className="arch-db">
             <Node title="PostgreSQL 17" tone="store">
-              catalogs · sections · openings · polls
+              openings · polls · sections · catalogs · users · watches · alerts
             </Node>
           </div>
         </div>
@@ -80,13 +83,13 @@ export function ArchitectureDiagram() {
             React · search runs in the browser
           </Node>
           <Node title="Discord" tone="client">
-            Alerts by direct message
+            /snipe and friends · alerts by DM
           </Node>
         </div>
       </div>
       <figcaption>
-        One process keeps one source of truth for the open set. One request per term serves every user,
-        which is lighter on Rutgers than polling per user.
+        One process keeps one source of truth. One request per term serves every user and every alert,
+        which is lighter on Rutgers than polling per user. The bot works in one Discord server only.
       </figcaption>
     </figure>
   );
@@ -96,8 +99,8 @@ const CYCLE = [
   ["Fetch", "openSections.json for the term: every open index"],
   ["Diff", "Against open rows in the database: opened = now − before, closed = before − now"],
   ["Guard", "A mass change is held until it lasts 120 s"],
-  ["Write", "Openings, closings and the poll row, in one transaction"],
-  ["Serve", "The API and the website see it on their next request"],
+  ["Write", "Openings, closings, one alert per watcher and the poll row, in one transaction"],
+  ["Notify", "On commit, NOTIFY wakes the dispatcher; the website sees it on its next request"],
 ] as const;
 
 /** The 30 second poll, as a pipeline. */
@@ -113,6 +116,34 @@ export function PollCycle() {
         ))}
       </ol>
       <figcaption>Every 30 seconds, for each active term. A section that stays open produces no event.</figcaption>
+    </figure>
+  );
+}
+
+const DELIVERY = [
+  ["Queue", "The poll's transaction inserts an alert per watcher; snoozed watches and banned users are skipped"],
+  ["Wake", "PostgreSQL delivers NOTIFY on commit; a 15 s idle check catches retries"],
+  ["Claim", "Due alerts are leased for 2 minutes, oldest watches first (FOR UPDATE SKIP LOCKED)"],
+  ["Send", "A DM with Register, Snooze 1h, Stop watching and I got in; a private thread if DMs are closed"],
+  ["Record", "sent_at for the speed metric, or a retry from 30 s up to 8 min, then failed"],
+] as const;
+
+/** From an opening to a direct message. */
+export function AlertFlow() {
+  return (
+    <figure className="diagram-card" aria-label="Alert delivery">
+      <ol className="pipeline">
+        {DELIVERY.map(([title, text]) => (
+          <li key={title}>
+            <b>{title}</b>
+            <span>{text}</span>
+          </li>
+        ))}
+      </ol>
+      <figcaption>
+        An opening and its alerts are saved together, so a crash cannot record one and lose the other. A
+        unique (watch, opening) key means a retry never alerts anyone twice.
+      </figcaption>
     </figure>
   );
 }
@@ -189,13 +220,16 @@ export function TimingDiagram() {
   );
 }
 
-/** The four tables as cards. */
+/** The tables as cards: seat data first, then people and alerts. */
 export function DataModel() {
   const tables = [
-    ["catalogs", "One per term and campus", "The normalized catalog, gzipped, with a content-hash ETag", "Replaced on change"],
-    ["sections", "One per index", "Course, section number, instructors, campus: for joins", "Rebuilt with the catalog"],
     ["openings", "One per opening", "opened_at and closed_at, each with the check before it", "Kept for good"],
     ["polls", "One per check", "ok, held or error, with counts. Feeds uptime", "Kept 14 days"],
+    ["sections", "One per index", "Course, section number, instructors, campus: for names and joins", "Rebuilt with the catalog"],
+    ["catalogs", "One per term and campus", "The normalized catalog, gzipped, with a content-hash ETag", "Replaced on change"],
+    ["users · identities", "One per person · per Discord account", "Limits and bans attach to the person", "Kept while in use"],
+    ["watches", "One per person and section", "Unique, 15 per term, optional snooze", "Removed with their term"],
+    ["alerts", "One per watcher per opening", "The outbox: status, attempts, sent_at, and the button pressed", "Unlinked, never deleted"],
   ] as const;
   return (
     <div className="tables">

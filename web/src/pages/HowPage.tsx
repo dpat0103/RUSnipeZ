@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { Link, useLocation, useSearchParams } from "react-router";
 import { useStats } from "../api/hooks";
 import {
+  AlertFlow,
   ArchitectureDiagram,
   ChangeGuardDiagram,
   DataModel,
@@ -79,14 +80,14 @@ function Numbers({ items }: { items: [ReactNode, string][] }) {
 const FLOW = [
   ["Check", "Every 30 seconds, it asks Rutgers which sections are open, for every campus and active term."],
   ["Spot", "A section that was full on one check and open on the next just opened."],
-  ["Alert", "Students watching it get a Discord DM with a WebReg link, index filled in."],
+  ["Alert", "Students watching it get a Discord DM within seconds, with a WebReg link that has the index filled in."],
   ["Remember", "Every opening is recorded, so you can see how often and when a section opens."],
 ] as const;
 
 const PAGES = [
   ["/", "Live", "Openings and closings as they happen, plus totals."],
   ["/search", "Search", "Any course or section: open now, when it was last open, and its history."],
-  ["/search", "Discord preview", "Beside the search results, try the bot: /snipe, /check, and the alert you would get."],
+  ["/search", "Discord preview", "Beside the search results, try the same commands as the bot: /snipe, /check, and the alert you would get."],
 ] as const;
 
 function Overview() {
@@ -102,7 +103,7 @@ function Overview() {
           [stats ? formatCount(stats.sectionsTracked) : "15,000+", "sections watched"],
           ["30 s", "between checks"],
           [stats?.checks24h ? formatCount(stats.checks24h) : "5,760", "checks a day"],
-          ["3", "campuses"],
+          ["3", "campuses, plus off-campus sites"],
           ["0", "NetIDs or passwords asked"],
         ]}
       />
@@ -167,11 +168,12 @@ function Overview() {
 }
 
 function Engineering() {
+  const speed = useStats().data?.medianAlertSeconds7d;
   return (
     <>
       <p className="lead">
-        One Python service polls Rutgers, detects changes, stores them in PostgreSQL and serves a
-        read-only API. This website and the Discord bot both read from it.
+        One Python service polls Rutgers, detects changes, stores them in PostgreSQL, delivers Discord
+        alerts and serves a read-only API. The bot runs inside that process; this website reads the API.
       </p>
 
       <Numbers
@@ -179,7 +181,7 @@ function Engineering() {
           ["~15,000", "open indexes per check"],
           ["30 s", "check cadence, Rutgers' cache floor"],
           ["120 s", "change guard hold"],
-          ["293 kB", "largest catalog, gzipped"],
+          [speed != null ? `${speed.toFixed(1)} s` : "~1 s", "check to Discord DM, median"],
           ["0.4–3 ms", "per search keystroke"],
         ]}
       />
@@ -203,11 +205,17 @@ function Engineering() {
   if change_guard.holds(opened, closed): record poll "held"; stop
   INSERT INTO openings (index, opened_at, open_detected_after) ...  -- opened
   UPDATE openings SET closed_at, close_detected_after ...         -- closed
-  INSERT INTO polls (status = 'ok', counts) ...                   -- one transaction`}</pre>
+  INSERT INTO alerts SELECT watch, opening ... ON CONFLICT DO NOTHING
+  INSERT INTO polls (status = 'ok', counts) ...
+  NOTIFY alerts                                                   -- one transaction`}</pre>
       </details>
       <ul>
         <li>
           A section that stays open produces no event, so alerts need no cooldown and cannot repeat.
+        </li>
+        <li>
+          Detection does not depend on the catalog. A section Rutgers opens before listing it is
+          recorded and alerted like any other; its name appears after the next catalog sync.
         </li>
         <li>
           The open set lives in the database (rows with <code>closed_at IS NULL</code>, enforced by a
@@ -226,6 +234,51 @@ function Engineering() {
         4,308 sections vanished and 19 long-closed ones reappeared.
       </p>
       <ChangeGuardDiagram />
+      <p>
+        It keeps happening: held polls cluster at :02, :17, :32 and :47 past the hour Eastern, about
+        one minute each, and none has ever been applied.
+      </p>
+
+      <h2>Delivering alerts</h2>
+      <AlertFlow />
+      <ul>
+        <li>
+          The dispatcher sends with no transaction open and up to 10 DMs at a time, so a popular
+          section opening for hundreds of watchers takes seconds, within Discord&apos;s rate limits.
+        </li>
+        <li>
+          Delivery is at least once: if the process dies mid-send, the lease runs out and the alert
+          goes again. The unique key keeps that to one alert per opening.
+        </li>
+        <li>
+          Removing a watch or a person unlinks their alerts instead of deleting them, so delivery
+          counts and speed stay accurate without keeping anyone&apos;s identity.
+        </li>
+      </ul>
+
+      <h2>The Discord bot</h2>
+      <ul>
+        <li>
+          <code>/snipe</code> (autocomplete by index, course code or title), <code>/check</code>,{" "}
+          <code>/remove</code>, <code>/clear</code>, <code>/lastopen</code>, <code>/course</code>,{" "}
+          <code>/status</code> and <code>/help</code>. Replies are visible only to the person who ran
+          the command.
+        </li>
+        <li>
+          Limits live in one watch service: 15 sections per person per term, no duplicates, and
+          Discord accounts under 7 days old cannot add watches. Adding locks the person&apos;s row, so
+          simultaneous commands cannot slip past the limit.
+        </li>
+        <li>Alert buttons carry the watch and alert in their IDs, so they keep working after a restart.</li>
+        <li>
+          It works in one server only: commands are registered there, and it leaves any other server
+          it is added to. The server&apos;s channels and permissions are applied from code.
+        </li>
+        <li>
+          <code>#live-openings</code> posts watched sections as they open, <code>#status</code> is one
+          message the bot keeps current, and warnings go to a private <code>#admin-log</code>.
+        </li>
+      </ul>
 
       <h2>Timing and history</h2>
       <TimingDiagram />
@@ -254,6 +307,19 @@ function Engineering() {
           <tr>
             <td>Uptime</td>
             <td>Share of minutes with at least one successful check</td>
+          </tr>
+          <tr>
+            <td>Check to DM</td>
+            <td>
+              Median of <code>sent_at − opened_at</code> over 7 days: the bot&apos;s own delay after the
+              check that saw the seat open
+            </td>
+          </tr>
+          <tr>
+            <td>Alerts sent, got in</td>
+            <td>
+              Delivered alerts, and alerts answered with <strong>I got in</strong>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -303,12 +369,12 @@ function Engineering() {
 
       <h2>Discord preview</h2>
       <p>
-        The panel beside the search results runs the bot&apos;s planned commands against live data,
-        in the browser. State is a reducer over watches and messages, saved to sessionStorage so it
+        The panel beside the search results runs the same commands as the bot against live data,
+        in the browser, so visitors can try it before joining. State is a reducer over watches and messages, saved to sessionStorage so it
         survives a reload and disappears when the tab closes. Replies are stored as data, not
         markup, and rendered as Discord embeds. While the tab is open, each watched term&apos;s
         open set is polled with the same cached query the pages use; a watched section going from
-        closed to open produces the same direct message the bot will send.
+        closed to open produces the same direct message the bot sends.
       </p>
 
       <h2>API</h2>
@@ -360,12 +426,15 @@ function Engineering() {
 
       <h2>Stack and testing</h2>
       <ul>
-        <li>Python 3.12, asyncio, FastAPI, httpx, SQLAlchemy 2 (async), Alembic, PostgreSQL 17</li>
+        <li>
+          Python 3.12, asyncio, FastAPI, httpx, SQLAlchemy 2 (async), Alembic, PostgreSQL 17,
+          discord.py 2
+        </li>
         <li>React 19, TypeScript, Vite, TanStack Query (polling and caching), React Router</li>
         <li>Docker Compose: the same stack runs locally and on a server</li>
         <li>
           pytest against a real PostgreSQL database, including replays of the stale-snapshot
-          incident; Vitest and Testing Library for the website; GitHub Actions runs lint, types,
+          incident, concurrent watch limits and alert retries; Vitest and Testing Library for the website; GitHub Actions runs lint, types,
           tests, a migration drift check and a Docker build
         </li>
       </ul>
