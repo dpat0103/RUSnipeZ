@@ -11,8 +11,9 @@ from discord import app_commands
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from rusnipez.bot import commands, embeds
+from rusnipez.bot import admin, commands, embeds
 from rusnipez.bot.alerts import AlertButton, DiscordNotifier
+from rusnipez.bot.channels import LiveChannels
 from rusnipez.db.models import Opening
 from rusnipez.services import reports
 from rusnipez.services.alerts import Dispatcher
@@ -43,11 +44,25 @@ class SnipeBot(discord.Client):
         self.guild = discord.Object(id=settings.discord_guild_id)
         self.tree = app_commands.CommandTree(self)
         self.tree.interaction_check = self._in_our_server
+        self.tree.on_error = self._on_command_error
         self._register()
 
     async def _in_our_server(self, interaction: discord.Interaction) -> bool:
         # None is a DM: alert buttons live there.
         return interaction.guild_id in (None, self.guild.id)
+
+    async def _on_command_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ) -> None:
+        if isinstance(error, app_commands.CheckFailure):
+            return  # The check already answered.
+        command = interaction.command.qualified_name if interaction.command else "?"
+        log.error("/%s failed", command, exc_info=error)
+        reply = "Something went wrong. It has been reported; please try again."
+        if interaction.response.is_done():
+            await interaction.followup.send(reply, ephemeral=True)
+        else:
+            await interaction.response.send_message(reply, ephemeral=True)
 
     async def section_details(self, session: AsyncSession, term: str, index: str) -> dict:
         """What the snipe reply shows about a section, listed or not."""
@@ -70,6 +85,8 @@ class SnipeBot(discord.Client):
 
     def _register(self) -> None:
         commands.register(self)
+        commands.register_info(self)
+        admin.register(self)
         self.add_dynamic_items(AlertButton)
 
         @self.tree.command(name="help", description="Every RU SnipeZ command.", guild=self.guild)
@@ -143,6 +160,11 @@ async def run_bot(sessions: async_sessionmaker, settings: Settings) -> None:
         await bot.wait_until_ready()
         await Dispatcher(sessions, [DiscordNotifier(bot)]).run(settings.database_url)
 
+    async def live_channels() -> None:
+        await bot.wait_until_ready()
+        await LiveChannels(bot).run()
+
     async with bot, asyncio.TaskGroup() as group:
         group.create_task(bot.start(settings.discord_token.get_secret_value()))
         group.create_task(dispatch())
+        group.create_task(live_channels())

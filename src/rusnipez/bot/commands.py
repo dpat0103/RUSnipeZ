@@ -1,5 +1,6 @@
-"""Watch commands: /snipe, /check, /remove and /clear. Replies are ephemeral,
-so a person's list is visible only to them."""
+"""Slash commands: /snipe, /check, /remove and /clear for watches, then
+/lastopen and /course for lookups. Replies are ephemeral, so a person's list is
+visible only to them."""
 
 from __future__ import annotations
 
@@ -10,7 +11,7 @@ import discord
 from discord import app_commands
 
 from rusnipez.bot import embeds
-from rusnipez.services import watches
+from rusnipez.services import reports, watches
 
 if TYPE_CHECKING:
     from rusnipez.bot.client import SnipeBot
@@ -151,3 +152,78 @@ def register(bot: SnipeBot) -> None:
             await interaction.response.send_message(
                 embed=embed, view=ClearConfirm(bot, user.id), ephemeral=True
             )
+
+
+def register_info(bot: SnipeBot) -> None:
+    """/lastopen and /course: read-only lookups anyone can run."""
+    tree, guild, settings = bot.tree, bot.guild, bot.settings
+    terms = settings.active_terms
+
+    async def section_choices(
+        interaction: discord.Interaction, current: str
+    ) -> list[app_commands.Choice[str]]:
+        async with bot.sessions() as session:
+            matches = await watches.find_sections(session, terms, current)
+        return [
+            app_commands.Choice(name=choice_label(m, len(terms) > 1), value=f"{m.term}:{m.index}")
+            for m in matches
+        ]
+
+    async def course_choices(
+        interaction: discord.Interaction, current: str
+    ) -> list[app_commands.Choice[str]]:
+        async with bot.sessions() as session:
+            courses = await watches.find_courses(session, terms, current)
+        several = len(terms) > 1
+        return [
+            app_commands.Choice(
+                name=f"{code} {title}" + (f" · {embeds.term_name(term)}" if several else ""),
+                value=f"{term}|{code}",
+            )
+            for term, code, title in courses
+        ]
+
+    @tree.command(
+        name="lastopen", description="When a section was last open, and how often.", guild=guild
+    )
+    @app_commands.describe(section="A 5-digit index, or start typing a course")
+    @app_commands.autocomplete(section=section_choices)
+    async def lastopen(interaction: discord.Interaction, section: str) -> None:
+        async with bot.sessions() as session:
+            resolved = await watches.resolve_section(session, terms, section)
+            if resolved is None:
+                embed = discord.Embed(
+                    title=f"Could not find section {section.strip()[:20]}.", colour=embeds.ERROR
+                )
+            else:
+                term, index = resolved
+                info = await bot.section_details(session, term, index)
+                history = await reports.section_history(
+                    session,
+                    term,
+                    index,
+                    datetime.now(UTC),
+                    precise_window=settings.precise_window_seconds,
+                )
+                embed = embeds.lastopen_embed(index, info["title"], info["section_number"], history)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @tree.command(
+        name="course", description="Every section of a course, with live status.", guild=guild
+    )
+    @app_commands.describe(code="A course code like 01:198:111, or start typing a title")
+    @app_commands.autocomplete(code=course_choices)
+    async def course(interaction: discord.Interaction, code: str) -> None:
+        term, _, course_code = code.rpartition("|")
+        async with bot.sessions() as session:
+            if term not in terms:
+                # Typed by hand: the first active term that offers it.
+                term, course_code = terms[0], code.strip()
+                for candidate in terms:
+                    if (await watches.course_sections(session, candidate, course_code))[1]:
+                        term = candidate
+                        break
+            title, sections = await watches.course_sections(session, term, course_code)
+        await interaction.response.send_message(
+            embed=embeds.course_embed(term, course_code[:40], title, sections), ephemeral=True
+        )

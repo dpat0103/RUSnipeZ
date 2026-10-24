@@ -50,6 +50,10 @@ def status_embed(stats: dict | None) -> discord.Embed:
     embed.add_field(name="Uptime", value="No data yet" if uptime is None else f"{uptime:.1%}")
     embed.add_field(name="Sections tracked", value=f"{stats['sections_tracked']:,}")
     embed.add_field(name="Openings, 24 hours", value=f"{stats['openings_24h']:,}")
+    if stats.get("alerts_sent_total"):
+        speed = stats["median_alert_seconds_7d"]
+        embed.add_field(name="Alerts sent, 24 hours", value=f"{stats['alerts_sent_24h']:,}")
+        embed.add_field(name="Check to DM", value="—" if speed is None else f"{speed:.1f} s")
     return embed
 
 
@@ -248,3 +252,74 @@ def alert_embed(job) -> discord.Embed:
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+SPARK = "▁▂▃▄▅▆▇█"
+CAMPUS_NAMES = {"NB": "New Brunswick", "NK": "Newark", "CM": "Camden", "OC": "Off-campus"}
+
+
+def sparkline(counts: list[int]) -> str:
+    top = max(counts)
+    if top == 0:
+        return ""
+    return "".join(SPARK[round(c / top * (len(SPARK) - 1))] if c else " " for c in counts)
+
+
+def duration(seconds: int) -> str:
+    if seconds < 90:
+        return f"{seconds} s"
+    if seconds < 90 * 60:
+        return f"{round(seconds / 60)} min"
+    return f"{seconds / 3600:.1f} h"
+
+
+def lastopen_embed(
+    index: str, title: str | None, section_number: str | None, history: dict
+) -> discord.Embed:
+    if history["open_now"]:
+        since = history["open_since"]
+        status = f"Open since {_relative(since)}" if since else "Open now"
+    elif history["last_seen_open_at"]:
+        status = f"Last seen open {_relative(history['last_seen_open_at'])}"
+    else:
+        status = "Not seen open since tracking began"
+    name = f"{title} · Sec {section_number}" if title else f"Section {index}"
+    embed = discord.Embed(title=name, colour=OPEN if history["open_now"] else INFO)
+    embed.add_field(name="Status", value=status, inline=False)
+    embed.add_field(
+        name="Openings",
+        value=f"{history['openings_7d']} in 7 days · {history['openings_30d']} in 30 days",
+    )
+    median = history["median_open_seconds"]
+    embed.add_field(
+        name="Typically open", value="Not enough data" if median is None else duration(median)
+    )
+    line = sparkline(history["openings_by_hour"])
+    if line:
+        embed.add_field(
+            name="When it opens (Eastern, last 30 days)",
+            value=f"```\n{line}\n12a   6a    12p   6p  11p\n```",
+            inline=False,
+        )
+    embed.set_footer(text=f"Index {index}")
+    return embed
+
+
+def course_embed(term: str, code: str, title: str | None, sections: list) -> discord.Embed:
+    if not sections:
+        return discord.Embed(title=f"Could not find {code}.", colour=ERROR)
+    shown = sections[:15]
+    open_count = sum(s.open for s in sections)
+    embed = discord.Embed(title=f"{code} {title}", colour=INFO)
+    lines = [
+        f"{'🟢' if s.open else '⚪'} Sec {s.number} · `{s.index}` · {name_case(s.instructors)}"
+        for s in shown
+    ]
+    if len(sections) > len(shown):
+        lines.append(f"and {len(sections) - len(shown)} more")
+    embed.description = "\n".join(lines)
+    campuses = sorted({CAMPUS_NAMES.get(s.campus, s.campus) for s in sections})
+    embed.set_footer(
+        text=f"{term_name(term)} · {', '.join(campuses)} · {open_count} of {len(sections)} open"
+    )
+    return embed

@@ -160,3 +160,59 @@ def test_snipe_replies() -> None:
     assert embeds.snipe_embed("added", open_now=True, **common).colour == embeds.OPEN
     assert embeds.snipe_embed("limit", open_now=False, **common).colour == embeds.ERROR
     assert "already" in embeds.snipe_embed("duplicate", open_now=False, **common).title
+
+
+def test_hour_chart_and_durations() -> None:
+    counts = [0] * 24
+    counts[9], counts[14] = 4, 8
+    line = embeds.sparkline(counts)
+    assert len(line) == 24 and line[14] == "█" and line[0] == " "
+    assert embeds.sparkline([0] * 24) == ""
+    assert [embeds.duration(s) for s in (45, 600, 7200)] == ["45 s", "10 min", "2.0 h"]
+
+
+def test_lastopen_and_course_replies() -> None:
+    from rusnipez.services.watches import CourseSection
+
+    history = {
+        "open_now": False,
+        "open_since": None,
+        "last_seen_open_at": T0,
+        "openings_7d": 3,
+        "openings_30d": 9,
+        "median_open_seconds": 240,
+        "openings_by_hour": [1] * 24,
+    }
+    embed = embeds.lastopen_embed("10001", "INTRO COMPUTER SCI", "01", history)
+    fields = {field.name: field.value for field in embed.fields}
+    assert fields["Openings"] == "3 in 7 days · 9 in 30 days"
+    assert fields["Typically open"] == "4 min"
+    sections = [
+        CourseSection("10001", "01", "DOE, JANE", "NB", True),
+        CourseSection("10002", "02", "", "NB", False),
+    ]
+    course = embeds.course_embed("12027", "01:198:111", "INTRO COMPUTER SCI", sections)
+    assert "🟢 Sec 01 · `10001` · Doe, Jane" in course.description
+    assert course.footer.text == "Spring 2027 · New Brunswick · 1 of 2 open"
+    assert embeds.course_embed("12027", "01:999:999", None, []).colour == embeds.ERROR
+
+
+async def test_admin_log_forwards_warnings_but_not_its_own_failures() -> None:
+    import asyncio
+    import logging
+
+    from rusnipez.bot.channels import AdminLogHandler
+
+    handler = AdminLogHandler(asyncio.get_running_loop())
+    for name, level in [
+        ("rusnipez.services.alerts", logging.ERROR),
+        ("rusnipez.services.alerts", logging.INFO),
+        ("rusnipez.bot.channels", logging.WARNING),
+        ("discord.gateway", logging.WARNING),
+    ]:
+        record = logging.LogRecord(name, level, __file__, 1, "boom", None, None)
+        if record.levelno >= handler.level:
+            handler.emit(record)
+    await asyncio.sleep(0)
+    assert handler.queue.qsize() == 1
+    assert handler.queue.get_nowait() == "ERROR rusnipez.services.alerts: boom"

@@ -214,3 +214,62 @@ async def resolve_section(
         if await section_known(session, term, value):
             return term, value
     return None
+
+
+async def find_courses(
+    session: AsyncSession, terms: list[str], query: str, limit: int = 25
+) -> list[tuple[str, str, str]]:
+    """(term, course code, title) for /course autocomplete."""
+    pattern = f"%{query.strip().replace('%', '').replace('_', '')}%"
+    term_order = func.min(case({term: n for n, term in enumerate(terms)}, value=Section.term))
+    rows = await session.execute(
+        select(Section.term, Section.course_code, Section.course_title)
+        .where(
+            Section.term.in_(terms),
+            Section.course_code.ilike(pattern) | Section.course_title.ilike(pattern),
+        )
+        .group_by(Section.term, Section.course_code, Section.course_title)
+        .order_by(term_order, Section.course_code)
+        .limit(limit)
+    )
+    return [tuple(row) for row in rows]
+
+
+@dataclass(frozen=True, slots=True)
+class CourseSection:
+    index: str
+    number: str
+    instructors: str
+    campus: str
+    open: bool
+
+
+async def course_sections(
+    session: AsyncSession, term: str, course_code: str
+) -> tuple[str | None, list[CourseSection]]:
+    """A course's title and every section with live status, by section number."""
+    open_now = (
+        exists()
+        .where(
+            Opening.term == Section.term,
+            Opening.index == Section.index,
+            Opening.closed_at.is_(None),
+        )
+        .label("open")
+    )
+    rows = (
+        await session.execute(
+            select(
+                Section.course_title,
+                Section.index,
+                Section.section_number,
+                Section.instructors,
+                Section.campus,
+                open_now,
+            )
+            .where(Section.term == term, Section.course_code == course_code)
+            .order_by(Section.section_number, Section.index)
+        )
+    ).all()
+    title = rows[0].course_title if rows else None
+    return title, [CourseSection(*row[1:]) for row in rows]

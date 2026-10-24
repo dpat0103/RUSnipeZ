@@ -202,3 +202,52 @@ async def test_the_first_answer_to_an_alert_counts(sessions) -> None:
     async with sessions() as session:
         stored = await session.get_one(Alert, alert.id)
     assert (stored.action, stored.acted_at, stored.watch_id) == ("got_in", T0, None)
+
+
+async def test_course_lookup_lists_sections_with_live_status(sessions) -> None:
+    async with sessions.begin() as session:
+        session.add_all(
+            [
+                section("10002", "01:198:111"),
+                section("10001", "01:198:111"),
+                section("10003", "01:640:151"),
+            ]
+        )
+        session.add(Opening(term="12027", index="10002", opened_at=T0))
+    async with sessions() as session:
+        assert await watches.find_courses(session, TERMS, "198") == [
+            ("12027", "01:198:111", "INTRO COMPUTER SCI")
+        ]
+        title, rows = await watches.course_sections(session, "12027", "01:198:111")
+    assert title == "INTRO COMPUTER SCI"
+    assert [(row.index, row.open) for row in rows] == [("10001", False), ("10002", True)]
+
+
+async def test_live_openings_lists_only_watched_sections(sessions) -> None:
+    from rusnipez.bot.channels import openings_message, watched_openings
+
+    await seed_sections(sessions, "10001", "10002")
+    for subject in ("1001", "1002"):
+        await add(sessions, await new_user(sessions, subject), "10001")
+    async with sessions.begin() as session:
+        session.add_all(
+            [
+                Opening(term="12027", index=index, opened_at=T0, open_detected_after=T0)
+                for index in ("10001", "10002")
+            ]
+            # Open when tracking began, then closed: not a new opening.
+            + [
+                Opening(
+                    term="12027",
+                    index="10001",
+                    opened_at=T0 - timedelta(days=1),
+                    closed_at=T0 - timedelta(hours=1),
+                )
+            ]
+        )
+    async with sessions() as session:
+        rows = await watched_openings(session, 0)
+    assert [(row.index, row.watchers) for row in rows] == [("10001", 2)]
+    assert (
+        openings_message(rows) == "🟢 `10001` 01:198:111 INTRO COMPUTER SCI · Sec 01 · 2 watching"
+    )
