@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from rusnipez.core.detection import ChangeGuard, diff_open_sets, fingerprint
 from rusnipez.db.models import Opening, Poll
+from rusnipez.services.alerts import queue_alerts
 from rusnipez.settings import Settings
 from rusnipez.soc.client import SocClient, SocError
 from rusnipez.soc.term import Term
@@ -106,8 +107,8 @@ class TermPoller:
                 )
             )
             if changes.opened:
-                await session.execute(
-                    insert(Opening),
+                opening_ids = await session.scalars(
+                    insert(Opening).returning(Opening.id),
                     [
                         {
                             "term": self.term.code,
@@ -118,6 +119,10 @@ class TermPoller:
                         for index in changes.opened
                     ],
                 )
+                # The first poll's open sections were open before tracking began;
+                # they are not openings anyone should be alerted about.
+                if previous_poll is not None:
+                    await queue_alerts(session, list(opening_ids), observed)
             if changes.closed:
                 await session.execute(
                     update(Opening)
