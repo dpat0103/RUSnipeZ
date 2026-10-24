@@ -60,6 +60,30 @@ export function StatTiles({ stats, now }: { stats: Stats | undefined; now: numbe
       tone: "plain",
     },
   ];
+  // Alert tiles appear once the bot has delivered something.
+  if (stats && stats.alertsSentTotal > 0) {
+    const speed = stats.medianAlertSeconds7d;
+    tiles.push(
+      {
+        label: "Alerts sent",
+        value: <Count value={stats.alertsSentTotal} />,
+        note: "Discord DMs to students",
+        tone: "accent",
+      },
+      {
+        label: "Check to DM",
+        value: speed == null ? "—" : `${speed.toFixed(1)} s`,
+        note: speed == null ? "no alerts this week" : "median, last 7 days",
+        tone: "open",
+      },
+      {
+        label: "Got in",
+        value: <Count value={stats.gotInTotal} />,
+        note: "pressed I got in on an alert",
+        tone: "plain",
+      },
+    );
+  }
   return (
     <dl className="tiles">
       {tiles.map((tile) => (

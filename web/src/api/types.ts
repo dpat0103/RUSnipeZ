@@ -34,6 +34,11 @@ export interface Stats {
   uptime24h: number | null;
   lastPollAt: string | null;
   trackingSince: string | null;
+  alertsSentTotal: number;
+  alertsSent24h: number;
+  /** Seconds from the check that saw a seat open to the alert being delivered. */
+  medianAlertSeconds7d: number | null;
+  gotInTotal: number;
 }
 
 export interface OpenSections {

@@ -292,6 +292,7 @@ async def service_stats(
     tracking_since = await session.scalar(
         select(func.min(Poll.finished_at)).where(Poll.term.in_(terms))
     )
+    alerts = await alert_stats(session, terms, now)
     return {
         "sections_tracked": sections_tracked or 0,
         "open_now": openings.open_now,
@@ -306,6 +307,45 @@ async def service_stats(
         "uptime_24h": round(sum(ratios) / len(ratios), 4) if ratios else None,
         "last_poll_at": last_poll_at,
         "tracking_since": tracking_since,
+        **alerts,
+    }
+
+
+async def alert_stats(session: AsyncSession, terms: list[str], now: datetime) -> dict:
+    """Alerts delivered, how fast, and how many people said they got in.
+
+    Speed is measured from the check that saw the seat open to the alert
+    arriving, so it is the bot's own delay; the seat itself opened up to one
+    poll interval before that check."""
+    row = (
+        await session.execute(
+            text("""
+                SELECT count(*) FILTER (WHERE a.status = 'sent') AS sent_total,
+                       count(*) FILTER (WHERE a.status = 'sent' AND a.sent_at >= :day_ago)
+                           AS sent_24h,
+                       percentile_cont(0.5) WITHIN GROUP (
+                           ORDER BY extract(epoch FROM a.sent_at - o.opened_at)
+                       ) FILTER (WHERE a.status = 'sent' AND a.sent_at >= :week_ago)
+                           AS median_seconds,
+                       count(*) FILTER (WHERE a.action = 'got_in') AS got_in_total
+                  FROM alerts a
+                  JOIN openings o ON o.id = a.opening_id
+                 WHERE o.term IN :terms
+            """).bindparams(bindparam("terms", expanding=True)),
+            {
+                "terms": terms,
+                "day_ago": now - timedelta(days=1),
+                "week_ago": now - timedelta(days=7),
+            },
+        )
+    ).one()
+    return {
+        "alerts_sent_total": row.sent_total,
+        "alerts_sent_24h": row.sent_24h,
+        "median_alert_seconds_7d": (
+            round(row.median_seconds, 1) if row.median_seconds is not None else None
+        ),
+        "got_in_total": row.got_in_total,
     }
 
 

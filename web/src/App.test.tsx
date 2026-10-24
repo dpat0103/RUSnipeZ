@@ -28,6 +28,10 @@ const stats: Stats = {
   uptime24h: 0.998,
   lastPollAt: NOW,
   trackingSince: "2026-11-16T09:10:00Z",
+  alertsSentTotal: 128,
+  alertsSent24h: 12,
+  medianAlertSeconds7d: 1.4,
+  gotInTotal: 9,
 };
 
 const events: Events = {
@@ -204,6 +208,9 @@ describe("live page", () => {
     expect(screen.getByText("99.8%")).toBeInTheDocument();
     expect(screen.getByText("4 min")).toBeInTheDocument();
     expect(screen.getByText("5,760")).toBeInTheDocument();
+    // The bot's delivery numbers.
+    expect(screen.getByText("128")).toBeInTheDocument();
+    expect(screen.getByText("1.4 s")).toBeInTheDocument();
     // Tracking began five hours ago, so the 24-hour tiles say so.
     expect(screen.getByText(/^Openings since Nov 16/)).toBeInTheDocument();
     const feed = within(screen.getByRole("region", { name: /Latest changes/ }));

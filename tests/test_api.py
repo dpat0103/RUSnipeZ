@@ -262,7 +262,43 @@ async def test_stats_with_no_data(api) -> None:
         "uptime24h": None,
         "lastPollAt": None,
         "trackingSince": None,
+        "alertsSentTotal": 0,
+        "alertsSent24h": 0,
+        "medianAlertSeconds7d": None,
+        "gotInTotal": 0,
     }
+
+
+async def test_stats_count_alerts_and_their_speed(api, sessions) -> None:
+    from rusnipez.db.models import Alert, User, Watch
+
+    async with sessions.begin() as session:
+        user = User()
+        session.add(user)
+        await session.flush()
+        watch = Watch(user_id=user.id, term="12027", index="10001")
+        session.add(watch)
+        await session.flush()
+        for n, (delay, action) in enumerate([(1.0, "got_in"), (3.0, None), (2.0, None)]):
+            opened = T0 + timedelta(minutes=n)
+            opening = Opening(term="12027", index="10001", opened_at=opened, closed_at=opened)
+            session.add(opening)
+            await session.flush()
+            session.add(
+                Alert(
+                    watch_id=watch.id,
+                    opening_id=opening.id,
+                    status="sent",
+                    sent_at=opened + timedelta(seconds=delay),
+                    action=action,
+                )
+            )
+        session.add(Alert(watch_id=None, opening_id=opening.id, status="failed"))
+    body = (await api.get("/api/v1/stats")).json()
+    assert body["alertsSentTotal"] == 3
+    assert body["alertsSent24h"] == 3
+    assert body["medianAlertSeconds7d"] == 2.0
+    assert body["gotInTotal"] == 1
 
 
 async def test_large_responses_are_compressed_once(api, sessions) -> None:

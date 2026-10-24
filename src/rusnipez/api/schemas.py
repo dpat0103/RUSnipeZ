@@ -108,6 +108,11 @@ class Stats(Model):
     uptime_24h: float | None
     last_poll_at: datetime | None
     tracking_since: datetime | None
+    alerts_sent_total: int
+    alerts_sent_24h: int
+    # From the check that saw the seat open to the alert being delivered.
+    median_alert_seconds_7d: float | None
+    got_in_total: int
 
 
 class Health(Model):
