@@ -128,6 +128,9 @@ without them the service runs as before. See [`.env.example`](.env.example) and
 
 ## Tests
 
+The live page's [metric definitions](docs/live-metrics.md) describe semester scoping,
+counting windows, timing precision and deployment order.
+
 ```bash
 .venv/Scripts/pytest -q                        # needs `docker compose up -d db`
 .venv/Scripts/ruff check src tests && .venv/Scripts/ruff format --check src tests

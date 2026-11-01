@@ -1,13 +1,12 @@
 import type { ReactNode } from "react";
 import type { Stats } from "../api/types";
-import { dateTime, duration, formatCount, formatPercent } from "../lib/format";
-import { useCountUp } from "../lib/useCountUp";
+import { dateTime, duration, formatCount, plural } from "../lib/format";
+import { STALE_AFTER_MS } from "../lib/config";
 
 const DAY_MS = 24 * 3600_000;
 
 function Count({ value }: { value: number }) {
-  const shown = useCountUp(value) ?? value;
-  return <>{formatCount(shown)}</>;
+  return <>{formatCount(value)}</>;
 }
 
 interface Tile {
@@ -17,47 +16,51 @@ interface Tile {
   tone: "open" | "accent" | "warn" | "plain";
 }
 
-export function StatTiles({ stats, now }: { stats: Stats | undefined; now: number }) {
+export function StatTiles({ stats, now, pollSeconds, error = false }: {
+  stats: Stats | undefined; now: number; pollSeconds: number; error?: boolean;
+}) {
   // Until a full day has been tracked, say what the window really is.
   const young = stats?.trackingSince && now - Date.parse(stats.trackingSince) < DAY_MS;
   const since = young ? `since ${dateTime(stats.trackingSince!)}` : "in 24 hours";
   const median = stats?.medianOpenSeconds7d;
+  const age = stats?.openObservedAt ? Math.max(0, now - Date.parse(stats.openObservedAt)) : null;
+  const delayed = age !== null && age > STALE_AFTER_MS;
   const tiles: Tile[] = [
     {
-      label: "Open right now",
-      value: stats && <Count value={stats.openNow} />,
-      note: "sections with a free seat",
+      label: delayed || error ? "Open at last update" : "Open right now",
+      value: stats && (stats.openObservedAt ? <Count value={stats.openNow} /> : "—"),
+      note: "sections Rutgers marked open",
       tone: "open",
     },
     {
-      label: `Openings ${since}`,
+      label: `Openings detected ${since}`,
       value: stats && <Count value={stats.openings24h} />,
-      note: "seats that freed up",
+      note: "section changes; repeats count",
       tone: "accent",
     },
     {
-      label: "A freed seat lasts",
-      value: stats && (median == null ? "—" : duration(median)),
-      note: median == null ? "not enough openings yet" : "median, last 7 days",
+      label: "Median open duration",
+      value: stats && (median == null ? "—" : `≈ ${duration(median)}`),
+      note: median == null ? "no timed closures yet" : `${plural(stats!.medianOpenSamples7d, "completed interval")} · last 7 days`,
       tone: "warn",
     },
     {
       label: `Checks ${since}`,
       value: stats && (stats.checks24h === undefined ? "—" : <Count value={stats.checks24h} />),
-      note: "one every 30 seconds per term",
+      note: `target ${formatCount(Math.round(86400 / pollSeconds))}/day · every ${pollSeconds}s`,
       tone: "plain",
     },
     {
       label: "Sections tracked",
       value: stats && <Count value={stats.sectionsTracked} />,
-      note: "every campus",
+      note: "in this term’s catalogs",
       tone: "plain",
     },
     {
-      label: young ? `Uptime ${since}` : "Uptime, 24 hours",
-      value: stats && (stats.uptime24h === null ? "—" : formatPercent(stats.uptime24h)),
-      note: "minutes with a successful check",
-      tone: "plain",
+      label: "Seat data age",
+      value: stats && (age === null ? "—" : duration(age / 1000)),
+      note: age === null ? "waiting for the first update" : delayed ? "delayed · last trusted update" : "since the last accepted check",
+      tone: delayed ? "warn" : "plain",
     },
   ];
   // Alert tiles appear once the bot has delivered something.
@@ -85,11 +88,11 @@ export function StatTiles({ stats, now }: { stats: Stats | undefined; now: numbe
     );
   }
   return (
-    <dl className="tiles">
+    <dl className="tiles" aria-label="Selected term statistics">
       {tiles.map((tile) => (
         <div className="tile" data-tone={tile.tone} key={tile.label}>
           <dt>{tile.label}</dt>
-          <dd>{tile.value ?? <span className="skeleton-text" aria-label="Loading" />}</dd>
+          <dd>{tile.value ?? (error ? "—" : <span className="skeleton-text" aria-label="Loading" />)}</dd>
           <dd className="tile-note">{tile.note}</dd>
         </div>
       ))}

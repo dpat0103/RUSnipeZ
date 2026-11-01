@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import type { SeatEvent } from "../api/types";
 import { CAMPUS_NAMES } from "../lib/config";
-import { timeAgo } from "../lib/format";
+import { dateTime, timeAgo } from "../lib/format";
 import { useNow } from "../lib/hooks";
 
 const key = (event: SeatEvent) => `${event.kind}-${event.index}-${event.at}`;
@@ -19,7 +19,7 @@ export function EventFeed({ events, term }: { events: SeatEvent[]; term: string 
   if (events.length === 0) {
     return (
       <p className="empty">
-        No openings or closings yet. Changes appear here within 30 seconds of happening.
+        No openings or closings recorded for this term yet.
       </p>
     );
   }
@@ -51,7 +51,7 @@ export function EventFeed({ events, term }: { events: SeatEvent[]; term: string 
           </Link>
           <time
             dateTime={event.at}
-            title={event.precise ? undefined : "Detected after a gap in checks; exact time unknown"}
+            title={`${dateTime(event.at)}${event.precise ? " · detection time" : " · detected after a gap in checks; exact time unknown"}`}
           >
             {event.precise ? "" : "~"}
             {timeAgo(event.at, now)}

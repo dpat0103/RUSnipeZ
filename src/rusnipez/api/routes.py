@@ -73,6 +73,8 @@ async def meta(session: SessionDep, settings: SettingsDep, response: Response) -
 @router.get("/v1/stats", response_model=schemas.Stats)
 async def stats(session: SessionDep, settings: SettingsDep, response: Response) -> dict:
     response.headers["Cache-Control"] = LIVE
+    # All counters and their observation time must see the same committed poll.
+    await session.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
     return await reports.service_stats(
         session, settings.active_terms, now(), precise_window=settings.precise_window_seconds
     )
@@ -83,6 +85,17 @@ async def open_sections(term: TermDep, session: SessionDep, response: Response) 
     response.headers["Cache-Control"] = LIVE
     result = await reports.open_set(session, term)
     return {"term": term, "observed_at": result.observed_at, "indexes": result.indexes}
+
+
+@router.get("/v1/terms/{term}/stats", response_model=schemas.Stats)
+async def term_stats(
+    term: TermDep, session: SessionDep, settings: SettingsDep, response: Response
+) -> dict:
+    response.headers["Cache-Control"] = LIVE
+    await session.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
+    return await reports.service_stats(
+        session, [term], now(), precise_window=settings.precise_window_seconds
+    )
 
 
 @router.get("/v1/terms/{term}/events", response_model=schemas.Events)

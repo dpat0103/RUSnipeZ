@@ -55,7 +55,8 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
 
 export const api = {
   meta: (signal?: AbortSignal) => get<Meta>("/v1/meta", signal),
-  stats: (signal?: AbortSignal) => get<Stats>("/v1/stats", signal),
+  stats: (signal?: AbortSignal, term?: string) =>
+    get<Stats>(term ? `/v1/terms/${term}/stats` : "/v1/stats", signal),
   open: (term: string, signal?: AbortSignal) => get<OpenSections>(`/v1/terms/${term}/open`, signal),
   events: (term: string, signal?: AbortSignal) =>
     get<Events>(`/v1/terms/${term}/events?limit=40`, signal),

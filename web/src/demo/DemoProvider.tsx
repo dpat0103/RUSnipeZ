@@ -31,13 +31,14 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   // Live status for every term with a watch, from the same cache the pages use.
   const watchedTerms = useMemo(() => [...new Set(state.watches.map((w) => w.term))], [state.watches]);
-  const openQueries = useQueries({ queries: watchedTerms.map((t) => openSectionsQuery(t)) });
+  const openData = useQueries({
+    queries: watchedTerms.map((t) => openSectionsQuery(t)),
+    // combine structurally shares the array when the open sets are unchanged.
+    combine: (results) => results.map((result) => result.data?.indexes),
+  });
   const openByTerm = useMemo(
-    () => new Map(watchedTerms.map((t, i) => [t, openQueries[i]?.data?.indexes])),
-    // Rebuild only when some term's open set changed. Structural sharing keeps
-    // the same data object when a refetch returns identical content.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [watchedTerms, ...openQueries.map((q) => q.data)],
+    () => new Map(watchedTerms.map((t, i) => [t, openData[i]])),
+    [watchedTerms, openData],
   );
 
   const post = useCallback(

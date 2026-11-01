@@ -31,8 +31,8 @@ export const metaQuery = () =>
     refetchInterval: (query) => nextMetaRefetch(query.state.data, serverNow()),
   });
 
-export const statsQuery = () =>
-  queryOptions({ queryKey: ["stats"], queryFn: ({ signal }) => api.stats(signal), refetchInterval: LIVE_MS });
+export const statsQuery = (term?: string) =>
+  queryOptions({ queryKey: ["stats", term ?? "all"], queryFn: ({ signal }) => api.stats(signal, term), refetchInterval: LIVE_MS });
 
 // Module-level so TanStack Query reuses the selected value until the data changes.
 const toOpenSet = (data: OpenSections) => ({ observedAt: data.observedAt, indexes: new Set(data.indexes) });
@@ -64,8 +64,8 @@ export function useMeta() {
   return useQuery(metaQuery());
 }
 
-export function useStats() {
-  return useQuery(statsQuery());
+export function useStats(term?: string, enabled = true) {
+  return useQuery({ ...statsQuery(term), enabled });
 }
 
 export function useOpenSections(term: string | undefined) {

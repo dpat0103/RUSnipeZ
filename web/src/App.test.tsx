@@ -24,7 +24,9 @@ const stats: Stats = {
   openings24h: 42,
   openingsTotal: 42,
   medianOpenSeconds7d: 240,
-  checks24h: 5760,
+  medianOpenSamples7d: 12,
+  openObservedAt: NOW,
+  checks24h: 2880,
   uptime24h: 0.998,
   lastPollAt: NOW,
   trackingSince: "2026-11-16T09:10:00Z",
@@ -158,6 +160,9 @@ let openBody: OpenSections = open;
 const ROUTES: [RegExp, () => unknown][] = [
   [/\/api\/v1\/meta$/, () => meta],
   [/\/api\/v1\/stats$/, () => stats],
+  [/\/api\/v1\/terms\/12027\/stats$/, () => stats],
+  [/\/api\/v1\/terms\/02027\/stats$/, () => ({ ...stats, sectionsTracked: 233, openNow: 206, openings24h: 7, openingsTotal: 8, medianOpenSeconds7d: 60, checks24h: 2879, alertsSentTotal: 0 })],
+  [/\/api\/v1\/terms\/02027\/events/, () => ({ term: "02027", events: [{ ...events.events[0], courseTitle: "WINTER ONLY", at: "2026-11-10T14:09:30Z" }] })],
   [/\/api\/v1\/terms\/12027\/events/, () => events],
   [/\/api\/v1\/terms\/12027\/open$/, () => openBody],
   [/\/api\/v1\/terms\/12027\/history$/, () => history],
@@ -201,28 +206,60 @@ afterEach(() => {
 });
 
 describe("live page", () => {
-  it("shows service stats, live status and the event feed", async () => {
+  it("shows selected-term stats, live status and the event feed", async () => {
     renderAt("/");
     expect(await screen.findByText("INTRODUCTION TO COMPUTER SCIENCE")).toBeInTheDocument();
     expect(screen.getByText("15,560")).toBeInTheDocument();
-    expect(screen.getByText("99.8%")).toBeInTheDocument();
-    expect(screen.getByText("4 min")).toBeInTheDocument();
-    expect(screen.getByText("5,760")).toBeInTheDocument();
+    expect(screen.queryByText("99.8%")).not.toBeInTheDocument();
+    expect(screen.getByText("≈ 4 min")).toBeInTheDocument();
+    expect(screen.getByText("2,880")).toBeInTheDocument();
+    expect(screen.getByText(/target 2,880\/day/)).toBeInTheDocument();
+    expect(screen.getByText(/12 completed intervals · last 7 days/)).toBeInTheDocument();
     // The bot's delivery numbers.
     expect(screen.getByText("128")).toBeInTheDocument();
     expect(screen.getByText("1.4 s")).toBeInTheDocument();
     // Tracking began five hours ago, so the 24-hour tiles say so.
-    expect(screen.getByText(/^Openings since Nov 16/)).toBeInTheDocument();
+    expect(screen.getByText(/^Openings detected since Nov 16/)).toBeInTheDocument();
     const feed = within(screen.getByRole("region", { name: /Latest changes/ }));
     expect(feed.getByText("Opened")).toBeInTheDocument();
     expect(feed.getByText("30s ago")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Live · checked 0s ago");
-    expect(screen.getByText(/^Across Spring 2027 and Winter 2027, all campuses · 42 openings recorded since/)).toBeInTheDocument();
+    expect(screen.getByText(/^Spring 2027 only, all campuses including off-campus locations · 42 openings recorded since/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "25627" })).toHaveAttribute("href", "/search?q=25627&term=12027");
     expect(screen.getByRole("link", { name: "Join the Discord" })).toHaveAttribute(
       "href",
       "https://discord.gg/7cuCT2jJR6",
     );
+  });
+
+  it("switches metrics and the feed together without mixing semesters", async () => {
+    const user = userEvent.setup();
+    renderAt("/");
+    expect(await screen.findByText("15,560")).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Term" }), "02027");
+    expect(await screen.findByText("206")).toBeInTheDocument();
+    expect(screen.queryByText("15,560")).not.toBeInTheDocument();
+    expect(screen.getByText("233")).toBeInTheDocument();
+    expect(screen.getByText("2,879")).toBeInTheDocument();
+    const feed = within(screen.getByRole("region", { name: "Latest changes · Winter 2027" }));
+    expect(await feed.findByText("WINTER ONLY")).toBeInTheDocument();
+    expect(feed.queryByText("INTRODUCTION TO COMPUTER SCIENCE")).not.toBeInTheDocument();
+    expect(feed.getByRole("link", { name: "25627" })).toHaveAttribute("href", "/search?q=25627&term=02027");
+    expect(feed.getByText(/Nov 10/)).toHaveTextContent("Nov 10, 9:09 AM EST");
+    // Searching without typing must also preserve Winter.
+    await user.click(screen.getByRole("button", { name: "Search" }));
+    expect(screen.getByRole("combobox", { name: "Term" })).toHaveValue("02027");
+  });
+
+  it("reports stats errors instead of leaving unexplained loading tiles", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.endsWith("/12027/stats")) return new Response("{}", { status: 404 });
+      const match = ROUTES.find(([pattern]) => pattern.test(url));
+      return new Response(JSON.stringify(match?.[1]() ?? {}));
+    }));
+    renderAt("/");
+    expect(await screen.findByText(/Figures are unavailable/)).toBeInTheDocument();
+    expect(screen.queryByText("15,560")).not.toBeInTheDocument();
   });
 });
 

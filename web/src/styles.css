@@ -946,6 +946,19 @@ select {
 
 /* ------------------------------------------------------------------ feed */
 
+.metric-notes {
+  color: var(--text-2);
+  font-size: 14px;
+}
+
+.metric-notes summary {
+  cursor: pointer;
+}
+
+.metric-notes p {
+  max-width: 80ch;
+}
+
 .feed {
   max-height: 560px;
   margin: 0;
@@ -956,10 +969,10 @@ select {
 
 .feed-row {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas:
-    "pill course time"
-    "pill course index";
+    "pill course course"
+    "index time time";
   align-items: center;
   gap: 2px 12px;
   padding: 11px 18px;
@@ -990,17 +1003,19 @@ select {
   color: var(--text-3);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .feed-row .index {
   grid-area: index;
-  justify-self: end;
+  justify-self: start;
 }
 
 @media (min-width: 760px) {
   .feed-row {
-    grid-template-columns: 76px 1fr 64px 76px;
+    grid-template-columns: 76px minmax(0, 1fr) max-content max-content;
     grid-template-areas: "pill course index time";
   }
 }
@@ -1027,6 +1042,7 @@ select {
 .feed-meta {
   color: var(--text-3);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 /* ----------------------------------------------------------- how it works */
