@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { webregUrl } from "./config";
-import { clock, duration, examLabel, formatPercent, hourLabel, meetingSummary, plainText, plural, timeAgo } from "./format";
+import { clock, dateTime, duration, examLabel, formatPercent, hourLabel, meetingSummary, plainText, plural, timeAgo } from "./format";
 
 describe("format", () => {
+  it("shows older event dates in Rutgers' time zone with the daylight-saving offset", () => {
+    expect(dateTime("2026-10-31T14:00:00Z")).toBe("Oct 31, 10:00 AM EDT");
+    expect(dateTime("2026-11-16T14:00:00Z")).toBe("Nov 16, 9:00 AM EST");
+  });
   it("converts 24-hour times", () => {
     expect(clock("15:50")).toBe("3:50 PM");
     expect(clock("00:05")).toBe("12:05 AM");

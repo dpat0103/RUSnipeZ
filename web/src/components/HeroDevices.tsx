@@ -33,12 +33,13 @@ export function HeroDevices({ events, now }: { events: SeatEvent[] | undefined; 
   // The newest named opening leads both screens, so the phone alerts about the laptop's top row.
   const named = (events ?? []).filter((e) => e.courseTitle).map(toRow);
   const opening = named.find((r) => r.kind === "opened");
-  const rows = opening && named.length >= 3 ? [opening, ...named.filter((r) => r !== opening)].slice(0, 4) : EXAMPLES;
+  const example = !opening;
+  const rows = opening ? [opening, ...named.filter((r) => r !== opening)].slice(0, 4) : EXAMPLES;
   const alert = rows[0]!;
   const campus = (events ?? []).find((e) => e.index === alert.index)?.campus;
 
   return (
-    <div className="devices" role="img" aria-label="RU SnipeZ on a laptop showing live seat changes, and a phone showing a Discord alert">
+    <div className="devices" role="img" aria-label={example ? "Example seat changes and Discord alert, for illustration only" : "Recent changes for the selected term and an illustrative Discord alert"}>
       <div className="laptop" aria-hidden="true">
         <div className="laptop-screen">
           <div className="mock-bar">
@@ -54,7 +55,7 @@ export function HeroDevices({ events, now }: { events: SeatEvent[] | undefined; 
               <img src="/logo.png" alt="" width={14} height={14} />
               <b>Latest changes</b>
               <span className="mock-live">
-                <span className="live-dot" /> Live
+                <span className="live-dot" /> {example ? "Example" : "Recent"}
               </span>
             </div>
             {rows.map((row, i) => (
@@ -64,7 +65,7 @@ export function HeroDevices({ events, now }: { events: SeatEvent[] | undefined; 
                   <b>{row.title}</b>
                   <small>{row.meta}</small>
                 </span>
-                <span className="mock-time">{row.at ? timeAgo(row.at, now) : "now"}</span>
+                <span className="mock-time">{row.at ? timeAgo(row.at, now) : "example"}</span>
               </div>
             ))}
           </div>

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { useEvents, useStats } from "../api/hooks";
+import { useEvents, useMeta, useStats } from "../api/hooks";
 import { Crosshair } from "../components/Crosshair";
 import { DiscordCta } from "../components/DiscordCta";
 import { EventFeed } from "../components/EventFeed";
@@ -19,12 +19,12 @@ const STEPS = [
 
 export function LivePage() {
   const { term, info, terms } = useTerm();
-  const stats = useStats();
+  const meta = useMeta();
+  const stats = useStats(term, Boolean(term));
   const events = useEvents(term);
-  const now = useNow(60_000);
+  const now = useNow();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const termNames = terms.map((t) => t.name ?? t.code).join(" and ");
 
   const searchFor = (q: string) => {
     const params = new URLSearchParams({ q });
@@ -33,7 +33,7 @@ export function LivePage() {
   };
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    navigate(query.trim() ? searchFor(query.trim()) : "/search");
+    navigate(searchFor(query.trim()));
   };
 
   return (
@@ -75,15 +75,41 @@ export function LivePage() {
         <HeroDevices events={events.data?.events} now={now} />
       </section>
 
-      <StatTiles stats={stats.data} now={now} />
-      {termNames && (
+      {stats.isError && (
+        <p role="status" className="caption">
+          Figures could not refresh. {stats.data ? "Last known values are shown." : "Figures are unavailable."} Retrying automatically.
+        </p>
+      )}
+      <StatTiles key={term} stats={stats.data} now={now} pollSeconds={meta.data?.pollSeconds ?? 30} error={stats.isError} />
+      {info && (
         <p className="caption">
-          Across {termNames}, all campuses
+          {info.name ?? term} only, all campuses including off-campus locations
           {stats.data?.trackingSince &&
             ` · ${plural(stats.data.openingsTotal, "opening")} recorded since ${dateTime(stats.data.trackingSince)}`}
           .
         </p>
       )}
+
+      <details className="metric-notes">
+        <summary>What these numbers mean</summary>
+        <p>
+          Openings count detected closed-to-open section changes, not individual seats; the same
+          section can reopen more than once. Sections already open when tracking began do not count.
+          Rutgers reports availability, not seat counts; some open sections require special permission.
+        </p>
+        <p>
+          The median uses completed intervals that closed in the last 7 days, with opening and
+          closing each bounded by accepted checks no more than {(meta.data?.pollSeconds ?? 30) * 3} seconds apart.
+          Still-open intervals and long gaps in checks
+          are excluded. This can favor shorter intervals; it is a historical summary, not a forecast
+          of how long your seat will last.
+        </p>
+        <p>
+          Check counts exclude failed responses, and include responses whose suspicious changes were
+          held back. Seat data age measures the last accepted update. Open sections can include
+          indexes Rutgers has not added to its catalog yet; sections tracked counts catalog entries.
+        </p>
+      </details>
 
       <section className="panel" aria-labelledby="feed-title">
         <div className="panel-head">
@@ -94,8 +120,8 @@ export function LivePage() {
           <span className="caption">Updates every 15 seconds</span>
           <p className="panel-note">
             The 40 most recent openings and closings in this term, newest first, across every
-            campus. An opening is a section one check found open after the check 30 seconds before
-            found it closed.
+            campus. Times show when a change was detected, usually within {meta.data?.pollSeconds ?? 30} seconds;
+            ~ marks a change detected after a gap in accepted checks.
           </p>
         </div>
         {events.isError ? (

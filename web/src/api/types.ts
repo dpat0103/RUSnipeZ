@@ -30,6 +30,9 @@ export interface Stats {
   openings24h: number;
   openingsTotal: number;
   medianOpenSeconds7d: number | null;
+  medianOpenSamples7d: number;
+  /** Last applied observation; held checks do not refresh seat availability. */
+  openObservedAt: string | null;
   checks24h: number;
   uptime24h: number | null;
   lastPollAt: string | null;
