@@ -40,6 +40,8 @@ class TermRow(Base):
     code: Mapped[str] = mapped_column(String(5), primary_key=True)
     name: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Survives poll-log retention, including terms whose first open set was empty.
+    tracking_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Catalog(Base):

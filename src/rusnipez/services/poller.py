@@ -11,7 +11,7 @@ from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from rusnipez.core.detection import ChangeGuard, diff_open_sets, fingerprint
-from rusnipez.db.models import Opening, Poll
+from rusnipez.db.models import Opening, Poll, TermRow
 from rusnipez.services.alerts import queue_alerts
 from rusnipez.settings import Settings
 from rusnipez.soc.client import SocClient, SocError
@@ -105,6 +105,11 @@ class TermPoller:
                 select(func.max(Poll.finished_at)).where(
                     Poll.term == self.term.code, Poll.status == "ok"
                 )
+            )
+            await session.execute(
+                update(TermRow)
+                .where(TermRow.code == self.term.code, TermRow.tracking_started_at.is_(None))
+                .values(tracking_started_at=observed)
             )
             if changes.opened:
                 opening_ids = await session.scalars(

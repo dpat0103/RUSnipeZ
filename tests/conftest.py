@@ -9,12 +9,16 @@ import os
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 
+import httpx
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from rusnipez.api import routes
+from rusnipez.api.app import create_app
 from rusnipez.db.session import create_engine, create_sessionmaker, migrate
 from rusnipez.services.catalog import ensure_terms
+from rusnipez.settings import Settings
 from rusnipez.soc.client import SocError
 from rusnipez.soc.term import Term
 
@@ -128,3 +132,14 @@ def course(code: str, title: str, *sections: tuple[str, str], spn: bool = False)
             for index, number in sections
         ],
     }
+
+
+@pytest.fixture
+async def api(sessions, database_url, monkeypatch) -> AsyncIterator[httpx.AsyncClient]:
+    # Freeze "now" ten minutes after the seeded polls.
+    monkeypatch.setattr(routes, "now", lambda: T0 + timedelta(minutes=10))
+    app = create_app(Settings(database_url=database_url, active_terms=TERMS, run_workers=False))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+    await app.state.engine.dispose()

@@ -1,38 +1,23 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 
-import httpx
-import pytest
 from sqlalchemy import insert
 
 from rusnipez.api import routes
-from rusnipez.api.app import create_app
 from rusnipez.db.models import Opening, Poll
 from rusnipez.services.catalog import store_catalog
 from rusnipez.services.poller import TermPoller
 from rusnipez.settings import Settings
 from rusnipez.soc.term import Term
-from tests.conftest import T0, TERMS, Clock, FakeSoc, course
+from tests.conftest import T0, Clock, FakeSoc, course
 
 SPRING = Term.parse("12027")
 COURSES = [
     course("01:198:111", "INTRO COMPUTER SCI", ("10001", "01"), ("10002", "02")),
     course("01:355:101", "COLLEGE WRITING", ("10003", "01")),
 ]
-
-
-@pytest.fixture
-async def api(sessions, database_url, monkeypatch) -> AsyncIterator[httpx.AsyncClient]:
-    # Freeze "now" ten minutes after the seeded polls.
-    monkeypatch.setattr(routes, "now", lambda: T0 + timedelta(minutes=10))
-    app = create_app(Settings(database_url=database_url, active_terms=TERMS, run_workers=False))
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
-    await app.state.engine.dispose()
 
 
 async def seed(sessions) -> None:
@@ -71,7 +56,7 @@ async def test_meta_lists_active_terms_in_priority_order(api, sessions) -> None:
     }
 
 
-async def test_meta_counts_held_polls_as_checks(api, sessions) -> None:
+async def test_meta_keeps_trusted_data_time_when_a_check_is_held(api, sessions) -> None:
     await seed(sessions)
     held_at = T0 + timedelta(minutes=2)
     async with sessions.begin() as session:
@@ -95,7 +80,10 @@ async def test_meta_counts_held_polls_as_checks(api, sessions) -> None:
         )
     response = await api.get("/api/v1/meta")
     assert response.headers["cache-control"] == routes.META
-    assert response.json()["terms"][0]["lastPollAt"] == "2026-11-16T14:02:00Z"
+    assert response.json()["terms"][0]["lastPollAt"] == "2026-11-16T14:01:00Z"
+    stats = (await api.get("/api/v1/terms/12027/stats")).json()
+    assert stats["checks24h"] == 4  # held response still counts, error does not
+    assert stats["lastPollAt"] == "2026-11-16T14:02:00Z"
 
 
 async def test_open_sections(api, sessions) -> None:
@@ -243,6 +231,8 @@ async def test_stats(api, sessions) -> None:
     assert body["openingsTotal"] == 1
     # 10002 was seen open by one check and closed by the next.
     assert body["medianOpenSeconds7d"] == 30
+    assert body["medianOpenSamples7d"] == 1
+    assert body["openObservedAt"] == "2026-11-16T14:01:00Z"
     assert body["checks24h"] == 3
     assert body["lastPollAt"] == "2026-11-16T14:01:00Z"
     assert body["trackingSince"] == "2026-11-16T14:00:00Z"
@@ -258,6 +248,8 @@ async def test_stats_with_no_data(api) -> None:
         "openings24h": 0,
         "openingsTotal": 0,
         "medianOpenSeconds7d": None,
+        "medianOpenSamples7d": 0,
+        "openObservedAt": None,
         "checks24h": 0,
         "uptime24h": None,
         "lastPollAt": None,
