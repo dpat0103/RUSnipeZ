@@ -49,7 +49,27 @@ gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
 gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
   --member=serviceAccount:$SA --role=roles/storage.objectUser \
   --condition="expression=resource.name.startsWith(\"projects/_/buckets/$BUCKET/objects/archive/\"),title=archive-only"
+```
 
+The conditional binding returned HTTP 503 on every try when this was set up (9 Nov 2026). If it
+does, write the policy instead: save `gcloud storage buckets get-iam-policy gs://$BUCKET
+--format=json` to `policy.json`, add `"version": 3` and this binding, then apply it with
+`gcloud storage buckets set-iam-policy gs://$BUCKET policy.json`.
+
+```json
+{
+  "role": "roles/storage.objectUser",
+  "members": ["serviceAccount:rusnipez-backup@rusnipez-dp26.iam.gserviceaccount.com"],
+  "condition": {
+    "title": "archive-only",
+    "expression": "resource.name.startsWith(\"projects/_/buckets/rusnipez-dp26-backups/objects/archive/\")"
+  }
+}
+```
+
+Then create a key and copy it to the server:
+
+```bash
 gcloud iam service-accounts keys create backup-key.json --iam-account=$SA
 scp -i ~/.ssh/rusnipez_oracle backup-key.json deploy@34.74.230.121:
 rm backup-key.json
@@ -66,6 +86,9 @@ echo RUSNIPEZ_BACKUP_BUCKET=rusnipez-dp26-backups >> /opt/rusnipez/.env
 
 `activate-service-account` copies the key into that config directory, so the downloaded file
 is no longer needed.
+
+Checked with the key when this was set up: the account can create objects anywhere and replace
+them under `archive/`, but overwriting or deleting under `daily/` is denied.
 
 ## Restore
 
