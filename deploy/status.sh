@@ -33,6 +33,14 @@ echo
 echo "== Backups"
 ls -1t /var/backups/rusnipez/*.dump 2>/dev/null | head -1 | xargs -r ls -lh | awk '{print "latest: " $NF " (" $5 ")"}'
 echo "kept: $(ls /var/backups/rusnipez/*.dump 2>/dev/null | wc -l)"
+if grep -q '^RUSNIPEZ_BACKUP_BUCKET=.' .env; then
+  last=$(cat /var/backups/rusnipez/last-upload 2>/dev/null || echo never)
+  age=""
+  [ "$last" = never ] || age=" ($(( ($(date -u +%s) - $(date -u -d "$last" +%s)) / 3600 )) h ago)"
+  echo "cloud upload: $last$age"
+else
+  echo "cloud upload: off (RUSNIPEZ_BACKUP_BUCKET is not set)"
+fi
 
 echo
 echo "== HTTPS certificate"

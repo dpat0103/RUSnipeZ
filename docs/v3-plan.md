@@ -124,7 +124,9 @@ stats (release 3.2.0).
   service's public URL once it exists, so the browser stays same-origin.
 - Service and database: this Compose stack on an always-free VM. Oracle Cloud Always Free
   (Arm, generous) first; Google Cloud e2-micro as the fallback. Caddy in front for TLS.
-- Backups: nightly `pg_dump` to S3-compatible storage (Cloudflare R2 or Backblaze B2 free tier).
+- Backups: nightly `pg_dump`, kept 14 days on the server and uploaded to a Cloud Storage bucket
+  in the free tier: dailies for 30 days, one per month indefinitely, and each term exported as
+  CSV for analytics ([setup and restore](../deploy/gcp/backups/README.md)).
 - Monitoring: Sentry for errors, UptimeRobot on `/api/health`, bot errors to the admin channel.
 
 ### 5. Paid hosting, later
