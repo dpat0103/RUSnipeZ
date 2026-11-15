@@ -102,7 +102,7 @@ def layout(watch_limit: int) -> list[Category]:
                     "Run /snipe here. Replies are only visible to you.",
                     slowmode=3,
                 ),
-                Channel("live-openings", "Watched sections as they open.", read_only=True),
+                Channel("live-openings", "Every section as it opens.", read_only=True),
                 Channel("status", "Is RU SnipeZ checking Rutgers right now?", read_only=True),
             ],
         ),

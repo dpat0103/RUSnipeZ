@@ -275,7 +275,7 @@ function Engineering() {
           it is added to. The server&apos;s channels and permissions are applied from code.
         </li>
         <li>
-          <code>#live-openings</code> posts watched sections as they open, <code>#status</code> is one
+          <code>#live-openings</code> logs every section as it opens, <code>#status</code> is one
           message the bot keeps current, and warnings go to a private <code>#admin-log</code>.
         </li>
       </ul>

@@ -1,8 +1,8 @@
 """The server's live channels: #live-openings, #status and #admin-log.
 
-#live-openings gets one message per batch of openings, only for sections
-someone is watching, so it stays readable during add/drop. #status is a single
-message the bot keeps editing. #admin-log receives the service's warnings and
+#live-openings logs every section as it opens, packed into as few messages as
+fit, so anyone can watch registration move. #status is a single message the bot
+keeps editing. #admin-log receives the service's warnings and
 errors, batched so a burst of failures is one message, not fifty.
 """
 
@@ -25,20 +25,20 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-MAX_LINES = 20
+# Discord's limit is 2,000 characters; the margin leaves room for "and N more".
+MESSAGE_CHARS = 1900
+# A burst past this many messages in one poll ends in "and N more".
+MAX_MESSAGES = 5
 
 
-async def watched_openings(session, after_id: int) -> list:
-    """Openings after ``after_id`` of sections someone watches, with watcher counts."""
+async def new_openings(session, after_id: int) -> list:
+    """Openings after ``after_id``, with what the section is when Rutgers lists it."""
     rows = await session.execute(
         text("""
-            SELECT o.id, o.term, o.index, s.course_code, s.course_title, s.section_number,
-                   count(w.id) AS watchers
+            SELECT o.id, o.term, o.index, s.course_code, s.course_title, s.section_number
               FROM openings o
-              JOIN watches w ON w.term = o.term AND w.index = o.index
               LEFT JOIN sections s ON s.term = o.term AND s.index = o.index
              WHERE o.id > :after AND o.open_detected_after IS NOT NULL
-             GROUP BY o.id, s.course_code, s.course_title, s.section_number
              ORDER BY o.id
         """),
         {"after": after_id},
@@ -46,19 +46,33 @@ async def watched_openings(session, after_id: int) -> list:
     return list(rows)
 
 
-def openings_message(rows: list) -> str:
-    lines = []
-    for row in rows[:MAX_LINES]:
-        what = (
-            f"{row.course_code} {row.course_title} · Sec {row.section_number}"
-            if row.course_title
-            else "Not listed by Rutgers yet"
-        )
-        watching = f"{row.watchers} watching"
-        lines.append(f"🟢 `{row.index}` {what} · {watching}")
-    if len(rows) > MAX_LINES:
-        lines.append(f"and {len(rows) - MAX_LINES} more")
-    return "\n".join(lines)
+def opening_line(row) -> str:
+    what = (
+        f"{row.course_code} {row.course_title} · Sec {row.section_number}"
+        if row.course_title
+        else "Not listed by Rutgers yet"
+    )
+    return f"🟢 `{row.index}` {what}"
+
+
+def openings_messages(rows: list) -> list[str]:
+    """One line per opening, packed into as few messages as fit."""
+    messages: list[str] = []
+    current: list[str] = []
+    size = 0
+    for posted, row in enumerate(rows):
+        line = opening_line(row)
+        if current and size + len(line) + 1 > MESSAGE_CHARS:
+            messages.append("\n".join(current))
+            current, size = [], 0
+            if len(messages) == MAX_MESSAGES:
+                messages[-1] += f"\nand {len(rows) - posted} more"
+                return messages
+        current.append(line)
+        size += len(line) + 1
+    if current:
+        messages.append("\n".join(current))
+    return messages
 
 
 class AdminLogHandler(logging.Handler):
@@ -118,13 +132,14 @@ class LiveChannels:
                 # Start from now: no backlog of openings from before a restart.
                 state["after"] = await session.scalar(select(func.max(Opening.id))) or 0
                 return
-            rows = await watched_openings(session, state["after"])
+            rows = await new_openings(session, state["after"])
         if not rows:
             return
         state["after"] = rows[-1].id
         channel = self.channel("live-openings")
         if channel is not None:
-            await channel.send(openings_message(rows))
+            for message in openings_messages(rows):
+                await channel.send(message)
 
     async def update_status(self, state: dict) -> None:
         channel = self.channel("status")
