@@ -34,6 +34,14 @@ def _relative(at: datetime) -> str:
     return discord.utils.format_dt(at, "R")
 
 
+NEVER_OPEN = "No openings seen yet"
+
+
+def last_open(at: datetime | None) -> str:
+    """When a closed section was last open, for /snipe and /check."""
+    return _relative(at) if at else NEVER_OPEN
+
+
 def help_embed() -> discord.Embed:
     embed = discord.Embed(title="RU SnipeZ commands", colour=INFO)
     embed.description = "\n".join(f"`{usage}`  {text}" for usage, text in COMMANDS)
@@ -109,6 +117,7 @@ def snipe_embed(
     open_now: bool,
     count: int,
     limit: int,
+    last_seen_open_at: datetime | None = None,
 ) -> discord.Embed:
     if result == "duplicate":
         return discord.Embed(title=f"You are already watching {index}.", colour=WARN)
@@ -135,6 +144,8 @@ def snipe_embed(
         instructors=instructors,
         spn=spn,
     )
+    if not open_now:
+        embed.add_field(name="Last open", value=last_open(last_seen_open_at))
     hint = (
         "Register now, or keep watching for the next opening"
         if open_now
@@ -160,7 +171,12 @@ def check_embed(rows: list, limit: int) -> discord.Embed:
             if row.course_title
             else "Not listed by Rutgers yet"
         )
-        state = "Open" if row.open else "Closed"
+        if row.open:
+            state = "Open"
+        elif row.last_seen_open_at:
+            state = f"Closed · last open {_relative(row.last_seen_open_at)}"
+        else:
+            state = "Closed · no openings seen yet"
         snoozed = " · snoozed" if row.snoozed_until and row.snoozed_until > _now() else ""
         lines.append(f"{dot} `{row.index}` {what} · {state}{snoozed}")
     embed.description = "\n".join(lines)

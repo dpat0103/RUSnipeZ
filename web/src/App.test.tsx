@@ -425,11 +425,16 @@ describe("discord preview", () => {
     expect(within(thread()).getByText("/snipe 25628")).toBeInTheDocument();
     expect(within(thread()).getByText("Now watching INTRODUCTION TO COMPUTER SCIENCE")).toBeInTheDocument();
     expect(within(thread()).getByText(/You will get a DM the moment it opens · 1\/15 watches/)).toBeInTheDocument();
+    // Seen open at 13:10, an hour before NOW.
+    expect(await within(thread()).findByText("1h ago")).toBeInTheDocument();
     expect(within(snipeList()).getByText("Sec 42 · 25628 · Closed")).toBeInTheDocument();
     expect(within(screen.getByRole("button", { name: /Sec 42/ })).getByText("Watching")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Watching · run /snipe again" }));
     expect(within(thread()).getByText("You are already watching 25628.")).toBeInTheDocument();
+
+    await command(user, "/check");
+    expect(await within(thread()).findByText(/Closed · last open 1h ago/)).toBeInTheDocument();
   });
 
   it("answers every typed command", async () => {

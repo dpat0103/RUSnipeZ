@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useSection } from "../api/hooks";
+import { useHistory, useSection } from "../api/hooks";
 import { HourChart } from "../components/HourChart";
 import { webregUrl } from "../lib/config";
 import { dateTime, duration, meetingLabels, nameCase, timeAgo } from "../lib/format";
@@ -42,6 +42,15 @@ function Fields({ rows }: { rows: [string, ReactNode][] }) {
 }
 
 const sectionLabel = (w: Watch) => `${w.courseCode} · Sec ${w.sectionNumber}`;
+
+/** When a closed section was last open, like the bot's /snipe and /check. */
+function LastSeen({ term, index, inline = false }: { term: string; index: string; inline?: boolean }) {
+  const { data } = useHistory(term);
+  if (!data) return null;
+  const seen = data.sections[index]?.lastSeenOpen;
+  if (inline) return <>{seen ? ` · last open ${timeAgo(seen, Date.now())}` : " · no openings seen yet"}</>;
+  return <>{seen ? timeAgo(seen, Date.now()) : "No openings seen yet"}</>;
+}
 
 function watchFields(watch: Watch): [string, ReactNode][] {
   const rows: [string, ReactNode][] = [
@@ -90,7 +99,13 @@ function Body({ message }: { message: Message }) {
             title={reply.openNow ? `${watch.courseTitle} is open right now` : `Now watching ${watch.courseTitle}`}
             footer={`${reply.openNow ? "Register now, or keep watching for the next opening" : "You will get a DM the moment it opens"} · ${reply.count}/${WATCH_LIMIT} watches`}
           >
-            <Fields rows={watchFields(watch)} />
+            <Fields
+              rows={
+                reply.openNow
+                  ? watchFields(watch)
+                  : [...watchFields(watch), ["Last open", <LastSeen term={watch.term} index={watch.index} />]]
+              }
+            />
           </Embed>
           {reply.openNow && (
             <div className="dc-buttons">
@@ -115,7 +130,11 @@ function Body({ message }: { message: Message }) {
               <li key={`${watch.term}-${watch.index}`}>
                 <Dot open={open} />
                 <code>{watch.index}</code> {watch.courseTitle} · Sec {watch.sectionNumber}
-                <span className="dc-muted"> {open === null ? "" : open ? "Open" : "Closed"}</span>
+                <span className="dc-muted">
+                  {" "}
+                  {open === null ? "" : open ? "Open" : "Closed"}
+                  {open === false && <LastSeen term={watch.term} index={watch.index} inline />}
+                </span>
               </li>
             ))}
           </ul>

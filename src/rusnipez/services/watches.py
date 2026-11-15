@@ -33,6 +33,22 @@ class WatchView:
     course_title: str | None
     section_number: str | None
     instructors: str | None
+    # When the section was last seen open; None if never since tracking began.
+    last_seen_open_at: datetime | None = None
+
+
+def last_seen_open(term, index):
+    """The last moment a section was seen open, as a scalar subquery.
+
+    Matches /lastopen and the website: the check that saw it close, or when it
+    opened if that check is unknown. Only closed openings count; the caller
+    already knows whether the section is open now.
+    """
+    return (
+        select(func.max(func.coalesce(Opening.close_detected_after, Opening.opened_at)))
+        .where(Opening.term == term, Opening.index == index, Opening.closed_at.is_not(None))
+        .scalar_subquery()
+    )
 
 
 async def user_for(session: AsyncSession, provider: str, subject: str) -> User:
@@ -110,6 +126,7 @@ async def list_watches(session: AsyncSession, user_id: int, terms: list[str]) ->
             Section.course_title,
             Section.section_number,
             Section.instructors,
+            last_seen_open(Watch.term, Watch.index),
         )
         .outerjoin(Section, (Section.term == Watch.term) & (Section.index == Watch.index))
         .where(Watch.user_id == user_id, Watch.term.in_(terms))

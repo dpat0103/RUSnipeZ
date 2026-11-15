@@ -15,7 +15,7 @@ from rusnipez.bot import admin, commands, embeds
 from rusnipez.bot.alerts import AlertButton, DiscordNotifier
 from rusnipez.bot.channels import LiveChannels
 from rusnipez.db.models import Opening
-from rusnipez.services import reports
+from rusnipez.services import reports, watches
 from rusnipez.services.alerts import Dispatcher
 from rusnipez.settings import Settings
 
@@ -81,6 +81,7 @@ class SnipeBot(discord.Client):
             "instructors": section.instructors if section else None,
             "spn": section.spn if section else False,
             "open_now": bool(open_now),
+            "last_seen_open_at": await session.scalar(select(watches.last_seen_open(term, index))),
         }
 
     def _register(self) -> None:

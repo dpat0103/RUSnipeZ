@@ -112,6 +112,43 @@ async def test_list_shows_open_sections_first_with_details(sessions) -> None:
     ]
 
 
+async def test_list_says_when_each_section_was_last_open(sessions) -> None:
+    await seed_sections(sessions, "10001", "10002", "10003")
+    user = await new_user(sessions)
+    for index in ("10001", "10002", "10003"):
+        await add(sessions, user, index)
+    async with sessions.begin() as session:
+        session.add_all(
+            [
+                # 10001 opened twice; the later close is what counts.
+                Opening(
+                    term="12027",
+                    index="10001",
+                    opened_at=T0 - timedelta(days=3),
+                    closed_at=T0 - timedelta(days=3) + timedelta(minutes=5),
+                    close_detected_after=T0 - timedelta(days=3) + timedelta(minutes=4),
+                ),
+                Opening(
+                    term="12027",
+                    index="10001",
+                    opened_at=T0 - timedelta(hours=2),
+                    open_detected_after=T0 - timedelta(hours=2),
+                    closed_at=T0 - timedelta(hours=1),
+                    close_detected_after=T0 - timedelta(hours=1, seconds=30),
+                ),
+                # 10002 is open now and was never closed: nothing to report.
+                Opening(term="12027", index="10002", opened_at=T0, open_detected_after=T0),
+            ]
+        )
+    async with sessions() as session:
+        rows = await watches.list_watches(session, user.id, TERMS)
+    assert {row.index: row.last_seen_open_at for row in rows} == {
+        "10001": T0 - timedelta(hours=1, seconds=30),
+        "10002": None,
+        "10003": None,
+    }
+
+
 async def test_list_skips_terms_no_longer_polled(sessions) -> None:
     await seed_sections(sessions, "10001")
     user = await new_user(sessions)

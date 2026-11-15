@@ -307,6 +307,48 @@ def test_snipe_replies() -> None:
     assert "already" in embeds.snipe_embed("duplicate", open_now=False, **common).title
 
 
+def test_snipe_shows_when_a_closed_section_was_last_open() -> None:
+    common = dict(
+        term="12027",
+        index="10001",
+        title="INTRO COMPUTER SCI",
+        course_code="01:198:111",
+        section_number="01",
+        instructors=None,
+        spn=False,
+        count=1,
+        limit=15,
+    )
+
+    def last_open(embed: discord.Embed) -> str | None:
+        return next((f.value for f in embed.fields if f.name == "Last open"), None)
+
+    seen = embeds.snipe_embed("added", open_now=False, last_seen_open_at=T0, **common)
+    assert last_open(seen) == f"<t:{int(T0.timestamp())}:R>"
+    never = embeds.snipe_embed("added", open_now=False, last_seen_open_at=None, **common)
+    assert last_open(never) == "No openings seen yet"
+    assert last_open(embeds.snipe_embed("added", open_now=True, **common)) is None
+
+
+def test_check_shows_when_each_closed_section_was_last_open() -> None:
+    def row(index: str, open_: bool, seen) -> SimpleNamespace:
+        return SimpleNamespace(
+            index=index,
+            open=open_,
+            course_title="INTRO COMPUTER SCI",
+            section_number="01",
+            snoozed_until=None,
+            last_seen_open_at=seen,
+        )
+
+    lines = embeds.check_embed(
+        [row("10001", True, None), row("10002", False, T0), row("10003", False, None)], 15
+    ).description.splitlines()
+    assert lines[0].endswith("· Open")
+    assert lines[1].endswith(f"· Closed · last open <t:{int(T0.timestamp())}:R>")
+    assert lines[2].endswith("· Closed · no openings seen yet")
+
+
 def test_hour_chart_and_durations() -> None:
     counts = [0] * 24
     counts[9], counts[14] = 4, 8
