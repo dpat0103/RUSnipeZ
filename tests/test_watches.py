@@ -223,17 +223,17 @@ async def test_course_lookup_lists_sections_with_live_status(sessions) -> None:
     assert [(row.index, row.open) for row in rows] == [("10001", False), ("10002", True)]
 
 
-async def test_live_openings_lists_only_watched_sections(sessions) -> None:
-    from rusnipez.bot.channels import openings_message, watched_openings
+async def test_live_openings_lists_every_new_opening(sessions) -> None:
+    from rusnipez.bot.channels import new_openings, openings_messages
 
     await seed_sections(sessions, "10001", "10002")
-    for subject in ("1001", "1002"):
-        await add(sessions, await new_user(sessions, subject), "10001")
+    # Watched or not, every opening is logged.
+    await add(sessions, await new_user(sessions, "1001"), "10001")
     async with sessions.begin() as session:
         session.add_all(
             [
                 Opening(term="12027", index=index, opened_at=T0, open_detected_after=T0)
-                for index in ("10001", "10002")
+                for index in ("10001", "10002", "99999")
             ]
             # Open when tracking began, then closed: not a new opening.
             + [
@@ -246,8 +246,10 @@ async def test_live_openings_lists_only_watched_sections(sessions) -> None:
             ]
         )
     async with sessions() as session:
-        rows = await watched_openings(session, 0)
-    assert [(row.index, row.watchers) for row in rows] == [("10001", 2)]
-    assert (
-        openings_message(rows) == "🟢 `10001` 01:198:111 INTRO COMPUTER SCI · Sec 01 · 2 watching"
-    )
+        rows = await new_openings(session, 0)
+    assert [row.index for row in rows] == ["10001", "10002", "99999"]
+    assert openings_messages(rows) == [
+        "🟢 `10001` 01:198:111 INTRO COMPUTER SCI · Sec 01\n"
+        "🟢 `10002` 01:198:111 INTRO COMPUTER SCI · Sec 01\n"
+        "🟢 `99999` Not listed by Rutgers yet"
+    ]

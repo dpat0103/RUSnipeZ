@@ -110,8 +110,8 @@ registers commands only in the configured server and leaves any other it is adde
   are visible only to the person who ran the command.
 - DM embed with **Register**, **Snooze 1h**, **Stop watching** and **I got in**. The buttons
   keep working across restarts. When DMs are closed, the alert goes to a private thread.
-- `#live-openings` gets one message per poll for watched sections; `#status` is one message the
-  bot keeps current; errors and failed DMs go to `#admin-log`.
+- `#live-openings` logs every opening, packed into as few messages per poll as fit;
+  `#status` is one message the bot keeps current; errors and failed DMs go to `#admin-log`.
 - Public stats gain alerts delivered and median open-to-DM latency.
 
 **Pull requests, in order:** accounts schema · watch service · alert outbox (release 3.1.0) ·

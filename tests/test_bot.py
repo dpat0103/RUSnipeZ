@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 
 import discord
 
 from rusnipez.bot import embeds
+from rusnipez.bot.channels import MAX_MESSAGES, openings_messages
 from rusnipez.bot.client import guilds_to_leave
 from rusnipez.bot.layout import (
     BOT_PERMISSIONS,
@@ -113,6 +115,34 @@ def test_trimming_everyone_never_adds_permissions() -> None:
 def test_chat_channels_have_slow_mode() -> None:
     for name in ("general", "support", "feedback"):
         assert channel(name)[1].slowmode > 0
+
+
+def opening(n: int) -> SimpleNamespace:
+    return SimpleNamespace(
+        index=f"{n:05}",
+        course_code="01:640:151",
+        course_title="CALCULUS I FOR THE MATHEMATICAL AND PHYSICAL SCIENCES",
+        section_number="03",
+    )
+
+
+def test_openings_pack_into_messages_under_discords_limit() -> None:
+    messages = openings_messages([opening(n) for n in range(60)])
+    assert 1 < len(messages) <= MAX_MESSAGES
+    assert all(len(message) <= 2000 for message in messages)
+    assert sum(message.count("🟢") for message in messages) == 60
+
+
+def test_a_burst_of_openings_ends_in_a_count() -> None:
+    messages = openings_messages([opening(n) for n in range(1000)])
+    assert len(messages) == MAX_MESSAGES
+    assert all(len(message) <= 2000 for message in messages)
+    shown = sum(message.count("🟢") for message in messages)
+    assert messages[-1].endswith(f"and {1000 - shown} more")
+
+
+def test_no_openings_posts_nothing() -> None:
+    assert openings_messages([]) == []
 
 
 def test_every_channel_message_builds() -> None:
