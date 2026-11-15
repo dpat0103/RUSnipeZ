@@ -20,7 +20,13 @@ LOGO_URL = f"{SITE_URL}/logo.png"
 # Screenshots for #how-to, served by the website from web/public/discord/.
 # A step shows its picture only once the file is listed here, so a missing
 # screenshot never leaves a broken image in the channel.
-SCREENSHOTS: dict[str, str] = {}
+SCREENSHOTS: dict[str, str] = {
+    "find": "find.png",
+    "snipe": "snipe.png",
+    "alert": "alert.png",
+    "dms": "dms.png",
+    "check": "check.png",
+}
 
 
 @dataclass(frozen=True)

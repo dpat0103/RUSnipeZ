@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 
@@ -205,10 +206,17 @@ def test_how_to_shows_only_screenshots_that_exist(monkeypatch) -> None:
     def link(name: str) -> str:
         return f"#{name}"
 
+    monkeypatch.setattr(pages, "SCREENSHOTS", {})
     assert not any(embed.image.url for embed in pages.how_to(link, 15).embeds)
     monkeypatch.setitem(pages.SCREENSHOTS, "snipe", "snipe.png")
     images = [embed.image.url for embed in pages.how_to(link, 15).embeds if embed.image.url]
     assert images == [f"{embeds.SITE_URL}/discord/snipe.png"]
+
+
+def test_every_listed_screenshot_is_served_by_the_website() -> None:
+    public = Path(__file__).parent.parent / "web" / "public" / "discord"
+    for name in pages.SCREENSHOTS.values():
+        assert (public / name).is_file(), name
 
 
 def test_help_lists_every_command() -> None:
