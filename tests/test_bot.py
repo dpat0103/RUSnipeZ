@@ -7,7 +7,14 @@ import discord
 
 from rusnipez.bot import embeds
 from rusnipez.bot.client import guilds_to_leave
-from rusnipez.bot.layout import BOT_PERMISSIONS, invite_url, layout, overwrites_for
+from rusnipez.bot.layout import (
+    BOT_PERMISSIONS,
+    EVERYONE_PERMISSIONS,
+    invite_url,
+    layout,
+    overwrites_for,
+    trimmed_everyone,
+)
 from rusnipez.settings import Settings
 from tests.conftest import T0
 
@@ -65,6 +72,47 @@ def test_members_can_post_commands_but_not_open_threads() -> None:
     assert overwrites[EVERYONE].create_private_threads is False
     assert overwrites[ME].create_private_threads is True
     assert spec.slowmode > 0
+
+
+def test_everyone_loses_discords_risky_defaults() -> None:
+    # What @everyone had on the live server before setup managed it.
+    defaults = discord.Permissions(
+        view_channel=True,
+        send_messages=True,
+        add_reactions=True,
+        mention_everyone=True,
+        create_instant_invite=True,
+        create_expressions=True,
+        create_events=True,
+        use_external_apps=True,
+        create_public_threads=True,
+        send_polls=True,
+        connect=True,
+    )
+    trimmed = trimmed_everyone(defaults)
+    assert trimmed.view_channel and trimmed.send_messages and trimmed.add_reactions
+    for risky in (
+        "mention_everyone",
+        "create_instant_invite",
+        "create_expressions",
+        "create_events",
+        "use_external_apps",
+        "create_public_threads",
+        "send_polls",
+        "connect",
+    ):
+        assert not getattr(trimmed, risky), risky
+
+
+def test_trimming_everyone_never_adds_permissions() -> None:
+    assert trimmed_everyone(discord.Permissions.none()) == discord.Permissions.none()
+    assert not EVERYONE_PERMISSIONS.mention_everyone
+    assert not EVERYONE_PERMISSIONS.administrator
+
+
+def test_chat_channels_have_slow_mode() -> None:
+    for name in ("general", "support", "feedback"):
+        assert channel(name)[1].slowmode > 0
 
 
 def test_every_channel_message_builds() -> None:

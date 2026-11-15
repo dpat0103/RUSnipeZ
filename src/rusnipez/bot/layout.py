@@ -1,9 +1,10 @@
 """The community server's layout, as code. ``rusnipez discord-setup`` applies it.
 
 Applying is idempotent: it creates what is missing and corrects topics, slow
-mode and permissions on what exists, matching channels by name. It never
-deletes anything, so channels added by hand are left alone. It works over the
-REST API only, so it can run while the service's bot is connected.
+mode and permissions on what exists, matching channels by name. It also trims
+@everyone down to ``EVERYONE_PERMISSIONS``. It never deletes anything, so
+channels added by hand are left alone. It works over the REST API only, so it
+can run while the service's bot is connected.
 """
 
 from __future__ import annotations
@@ -34,6 +35,26 @@ BOT_PERMISSIONS = discord.Permissions(
     manage_channels=True,
     manage_roles=True,
 )
+
+# The most any member gets server-wide. Discord's defaults also let everyone
+# ping @everyone, upload emojis, create events and invites, and run their own
+# apps; setup removes anything outside this set and never adds to it, since a
+# bot cannot grant permissions it lacks itself.
+EVERYONE_PERMISSIONS = discord.Permissions(
+    view_channel=True,
+    read_message_history=True,
+    send_messages=True,
+    # Alerts for members with closed DMs arrive in private threads.
+    send_messages_in_threads=True,
+    add_reactions=True,
+    embed_links=True,
+    attach_files=True,  # screenshots in #support
+    use_application_commands=True,
+    change_nickname=True,
+)
+
+# Slow mode on channels where members talk, so one account cannot flood them.
+CHAT_SLOWMODE = 5
 
 
 @dataclass(frozen=True)
@@ -88,9 +109,9 @@ def layout(watch_limit: int) -> list[Category]:
         Category(
             "Community",
             [
-                Channel("general", "Anything Rutgers registration."),
-                Channel("support", "Something not working? Ask here."),
-                Channel("feedback", "Ideas and requests for RU SnipeZ."),
+                Channel("general", "Anything Rutgers registration.", slowmode=CHAT_SLOWMODE),
+                Channel("support", "Something not working? Ask here.", slowmode=CHAT_SLOWMODE),
+                Channel("feedback", "Ideas and requests for RU SnipeZ.", slowmode=CHAT_SLOWMODE),
             ],
         ),
         Category(
@@ -139,6 +160,11 @@ def overwrites_for(
     return result
 
 
+def trimmed_everyone(current: discord.Permissions) -> discord.Permissions:
+    """@everyone's permissions with everything outside the allowed set removed."""
+    return discord.Permissions(current.value & EVERYONE_PERMISSIONS.value)
+
+
 def _same(current: dict, wanted: Overwrites) -> bool:
     by_id = {target.id: overwrite for target, overwrite in current.items()}
     return all(by_id.get(target.id) == overwrite for target, overwrite in wanted.items())
@@ -161,6 +187,15 @@ async def apply_layout(client: discord.Client, guild_id: int, watch_limit: int) 
             reason="RU SnipeZ setup",
         )
         changes.append(f"created role @{MOD_ROLE}")
+
+    everyone = guild.default_role
+    trimmed = trimmed_everyone(everyone.permissions)
+    if trimmed != everyone.permissions:
+        removed = sorted(
+            name for name, on in everyone.permissions if on and not getattr(trimmed, name)
+        )
+        await everyone.edit(permissions=trimmed, reason="RU SnipeZ setup")
+        changes.append(f"removed from @everyone: {', '.join(removed)}")
 
     existing = await guild.fetch_channels()
     for position, spec in enumerate(layout(watch_limit)):
