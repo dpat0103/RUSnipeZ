@@ -15,7 +15,8 @@ from dataclasses import dataclass, field
 
 import discord
 
-from rusnipez.bot import embeds
+from rusnipez.bot import pages
+from rusnipez.bot.pages import Link, Post
 
 log = logging.getLogger(__name__)
 
@@ -55,6 +56,8 @@ EVERYONE_PERMISSIONS = discord.Permissions(
 
 # Slow mode on channels where members talk, so one account cannot flood them.
 CHAT_SLOWMODE = 5
+# One story per person every 6 hours in #wins.
+WINS_SLOWMODE = 6 * 60 * 60
 
 
 @dataclass(frozen=True)
@@ -64,7 +67,7 @@ class Channel:
     read_only: bool = False
     slowmode: int = 0
     # Builds the message the bot keeps at the top of the channel, if any.
-    message: Callable[[], discord.Embed] | None = None
+    message: Callable[[Link], Post] | None = None
 
 
 @dataclass(frozen=True)
@@ -83,13 +86,14 @@ def layout(watch_limit: int) -> list[Category]:
                     "welcome",
                     "What RU SnipeZ is and how to start.",
                     read_only=True,
-                    message=embeds.welcome_embed,
+                    message=pages.welcome,
                 ),
+                Channel("rules", "The server rules.", read_only=True, message=pages.rules),
                 Channel(
                     "how-to",
-                    "Every command, and how to make sure alerts reach you.",
+                    "Step by step, with pictures: from finding an index to getting the alert.",
                     read_only=True,
-                    message=lambda: embeds.how_to_embed(watch_limit),
+                    message=lambda link: pages.how_to(link, watch_limit),
                 ),
                 Channel("announcements", "Releases, outages and registration dates.", True),
             ],
@@ -110,6 +114,12 @@ def layout(watch_limit: int) -> list[Category]:
             "Community",
             [
                 Channel("general", "Anything Rutgers registration.", slowmode=CHAT_SLOWMODE),
+                Channel(
+                    "wins",
+                    "Got into a class with RU SnipeZ? Tell us about it.",
+                    slowmode=WINS_SLOWMODE,
+                    message=pages.wins,
+                ),
                 Channel("support", "Something not working? Ask here.", slowmode=CHAT_SLOWMODE),
                 Channel("feedback", "Ideas and requests for RU SnipeZ.", slowmode=CHAT_SLOWMODE),
             ],
@@ -198,6 +208,7 @@ async def apply_layout(client: discord.Client, guild_id: int, watch_limit: int) 
         changes.append(f"removed from @everyone: {', '.join(removed)}")
 
     existing = await guild.fetch_channels()
+    placed: list[tuple[Channel, discord.TextChannel]] = []
     for position, spec in enumerate(layout(watch_limit)):
         category = next(
             (
@@ -253,24 +264,83 @@ async def apply_layout(client: discord.Client, guild_id: int, watch_limit: int) 
                 if edits:
                     await channel.edit(**edits, reason="RU SnipeZ setup")
                     changes.append(f"updated #{channel_spec.name}: {', '.join(edits)}")
-            if channel_spec.message is not None and await _post(
-                channel, client.user, channel_spec.message()
-            ):
-                changes.append(f"posted the #{channel_spec.name} message")
+            placed.append((channel_spec, channel))
+
+    if await _order(client, guild, [channel for _, channel in placed]):
+        changes.append("reordered channels")
+
+    # Messages last, once every channel they link to exists.
+    ids = {spec.name: channel.id for spec, channel in placed}
+
+    def link(name: str) -> str:
+        return f"<#{ids[name]}>" if name in ids else f"#{name}"
+
+    for spec, channel in placed:
+        if spec.message is not None and await _post(channel, client.user, spec.message(link)):
+            changes.append(f"posted the #{spec.name} message")
     return changes
 
 
-async def _post(channel: discord.TextChannel, me: discord.abc.User, embed: discord.Embed) -> bool:
+async def _order(
+    client: discord.Client, guild: discord.Guild, channels: list[discord.TextChannel]
+) -> bool:
+    """Put the layout's channels in layout order. Returns True if any moved."""
+    moves = [
+        {"id": channel.id, "position": position}
+        for position, channel in enumerate(channels)
+        if channel.position != position
+    ]
+    if moves:
+        await client.http.bulk_channel_update(guild.id, moves, reason="RU SnipeZ setup")
+    return bool(moves)
+
+
+def fingerprint(embeds: list[discord.Embed], buttons: list[tuple[str, str]]) -> list:
+    """What a post shows, ignoring what Discord adds to a sent message, such as
+    image sizes and proxy URLs, so an unchanged post is never edited."""
+    shown = []
+    for embed in embeds:
+        data = embed.to_dict()
+        data.pop("type", None)
+        for key in ("image", "thumbnail"):
+            if key in data:
+                data[key] = {"url": data[key].get("url")}
+        shown.append(data)
+    return [shown, [list(button) for button in buttons]]
+
+
+def _buttons(message: discord.Message) -> list[tuple[str, str]]:
+    return [
+        (child.label, child.url)
+        for row in message.components
+        if isinstance(row, discord.ActionRow)
+        for child in row.children
+        if isinstance(child, discord.Button) and child.url
+    ]
+
+
+def _view(post: Post) -> discord.ui.View | None:
+    if not post.buttons:
+        return None
+    view = discord.ui.View(timeout=None)
+    for label, url in post.buttons:
+        view.add_item(discord.ui.Button(label=label, url=url))
+    return view
+
+
+async def _post(channel: discord.TextChannel, me: discord.abc.User, post: Post) -> bool:
     """Post the bot's message once, then keep it current. Returns True if changed."""
+    wanted = fingerprint(post.embeds, post.buttons)
     async for message in channel.history(limit=20, oldest_first=True):
         if message.author.id == me.id:
-            if not message.embeds or message.embeds[0].to_dict() != embed.to_dict():
-                await message.edit(embed=embed)
+            if fingerprint(message.embeds, _buttons(message)) != wanted:
+                await message.edit(content=None, embeds=post.embeds, view=_view(post))
                 return True
             return False
-    # Not pinned: it is the only message in a read-only channel, and pinning
-    # needs a permission of its own.
-    await channel.send(embed=embed)
+    # Not pinned: it is the first message in its channel, and pinning needs a
+    # permission of its own.
+    kwargs = {"view": view} if (view := _view(post)) else {}
+    await channel.send(embeds=post.embeds, **kwargs)
     return True
 
 

@@ -6,12 +6,13 @@ from urllib.parse import parse_qs, urlparse
 
 import discord
 
-from rusnipez.bot import embeds
+from rusnipez.bot import embeds, pages
 from rusnipez.bot.channels import MAX_MESSAGES, openings_messages
 from rusnipez.bot.client import guilds_to_leave
 from rusnipez.bot.layout import (
     BOT_PERMISSIONS,
     EVERYONE_PERMISSIONS,
+    fingerprint,
     invite_url,
     layout,
     overwrites_for,
@@ -145,11 +146,69 @@ def test_no_openings_posts_nothing() -> None:
     assert openings_messages([]) == []
 
 
-def test_every_channel_message_builds() -> None:
+def all_channels() -> list[str]:
+    return [spec.name for category in layout(15) for spec in category.channels]
+
+
+def test_every_page_fits_discords_limits_and_links_real_channels() -> None:
+    names = set(all_channels())
     for category in layout(15):
         for spec in category.channels:
-            if spec.message:
-                assert spec.message().title
+            if spec.message is None:
+                continue
+            linked: list[str] = []
+            post = spec.message(lambda name, seen=linked: seen.append(name) or f"<#{name}>")
+            assert 1 <= len(post.embeds) <= 10, spec.name
+            assert len(post.buttons) <= 5, spec.name
+            assert sum(len(embed) for embed in post.embeds) <= 6000, spec.name
+            for embed in post.embeds:
+                assert embed.title and len(embed.title) <= 256
+                assert len(embed.description or "") <= 4096
+                assert len(embed.fields) <= 25
+                assert all(len(f.name) <= 256 and len(f.value) <= 1024 for f in embed.fields)
+            assert set(linked) <= names, f"#{spec.name} links a channel not in the layout"
+
+
+def test_start_here_leads_with_welcome_then_rules() -> None:
+    assert all_channels()[:4] == ["welcome", "rules", "how-to", "announcements"]
+    category, spec = channel("rules")
+    assert overwrites_for(category, spec, EVERYONE, MOD, ME)[EVERYONE].send_messages is False
+
+
+def test_wins_is_open_to_members_but_slow() -> None:
+    category, spec = channel("wins")
+    assert EVERYONE not in overwrites_for(category, spec, EVERYONE, MOD, ME)
+    assert spec.slowmode >= 60 * 60
+
+
+def test_a_sent_post_matches_its_source() -> None:
+    # Discord adds sizes and proxy URLs to images; that alone is not a change.
+    post = pages.welcome(lambda name: f"#{name}")
+    sent = discord.Embed.from_dict(
+        post.embeds[0].to_dict()
+        | {
+            "type": "rich",
+            "thumbnail": {
+                "url": pages.LOGO_URL,
+                "proxy_url": "https://media.discordapp.net/x.png",
+                "width": 256,
+                "height": 256,
+            },
+        }
+    )
+    assert fingerprint([sent], post.buttons) == fingerprint(post.embeds, post.buttons)
+    changed = pages.welcome(lambda name: f"<#{name}>")
+    assert fingerprint(changed.embeds, changed.buttons) != fingerprint(post.embeds, post.buttons)
+
+
+def test_how_to_shows_only_screenshots_that_exist(monkeypatch) -> None:
+    def link(name: str) -> str:
+        return f"#{name}"
+
+    assert not any(embed.image.url for embed in pages.how_to(link, 15).embeds)
+    monkeypatch.setitem(pages.SCREENSHOTS, "snipe", "snipe.png")
+    images = [embed.image.url for embed in pages.how_to(link, 15).embeds if embed.image.url]
+    assert images == [f"{embeds.SITE_URL}/discord/snipe.png"]
 
 
 def test_help_lists_every_command() -> None:

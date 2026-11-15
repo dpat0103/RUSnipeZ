@@ -57,55 +57,6 @@ def status_embed(stats: dict | None) -> discord.Embed:
     return embed
 
 
-def welcome_embed() -> discord.Embed:
-    embed = discord.Embed(
-        title="Welcome to RU SnipeZ",
-        colour=INFO,
-        description=(
-            "RU SnipeZ checks Rutgers every 30 seconds and DMs you the moment a section you "
-            "want opens.\n\nStudent-made. Not affiliated with Rutgers University."
-        ),
-        url=SITE_URL,
-    )
-    embed.add_field(
-        name="1. Find the index",
-        value=f"The 5-digit index from WebReg, or search on [the website]({SITE_URL}/search).",
-        inline=False,
-    )
-    embed.add_field(
-        name="2. Snipe it", value="Run `/snipe <index>` in #bot-commands.", inline=False
-    )
-    embed.add_field(
-        name="3. Keep DMs on",
-        value="Right-click the server › Privacy Settings › allow direct messages.",
-        inline=False,
-    )
-    return embed
-
-
-def how_to_embed(watch_limit: int) -> discord.Embed:
-    embed = help_embed()
-    embed.title = "How to use RU SnipeZ"
-    embed.add_field(
-        name="Alerts",
-        value=(
-            "A DM with **Register** (opens WebReg), **Snooze 1h**, **Stop watching** and "
-            "**I got in**. If your DMs are closed, the alert goes to a private thread in "
-            "#bot-commands instead."
-        ),
-        inline=False,
-    )
-    embed.add_field(
-        name="Limits",
-        value=(
-            f"Up to {watch_limit} sections per term. Your list is private: command replies "
-            "are only visible to you."
-        ),
-        inline=False,
-    )
-    return embed
-
-
 def webreg_url(term: str, index: str) -> str:
     return (
         "https://sims.rutgers.edu/webreg/editSchedule.htm"
