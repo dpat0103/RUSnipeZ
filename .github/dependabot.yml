@@ -1,0 +1,30 @@
+# Weekly dependency update PRs. Minor and patch updates arrive as one grouped PR per
+# ecosystem; major updates get their own PR so breaking changes are reviewed alone.
+#
+# Python is not listed: pyproject.toml only sets minimum versions and there is no lock
+# file, so CI already installs the latest releases. Vulnerable Python packages are caught
+# by pip-audit in CI and by Dependabot security alerts.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+    groups:
+      web-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: chore
+    groups:
+      actions:
+        patterns: ["*"]
