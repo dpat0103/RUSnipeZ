@@ -39,6 +39,9 @@ jobs:
         run: RUSNIPEZ_DATABASE_URL=$RUSNIPEZ_TEST_DATABASE_URL .venv/bin/alembic upgrade head && RUSNIPEZ_DATABASE_URL=$RUSNIPEZ_TEST_DATABASE_URL .venv/bin/alembic check
       - name: Test
         run: .venv/bin/pytest -q
+      # Warns instead of failing: a new advisory in a dependency would otherwise block
+      # unrelated PRs until upstream ships a fix. Findings show as a warning on the run,
+      # and Dependabot security alerts track them.
       - name: Audit dependencies
         run: |
           uv pip install pip-audit
