@@ -139,7 +139,8 @@ npm --prefix web run lint && npm --prefix web run typecheck && npm --prefix web 
 
 CI runs all of it, plus a migration drift check and a Docker build, on every push and pull
 request. To run the ruff checks before each commit, install the hooks once with
-`uvx pre-commit install`.
+`uvx pre-commit install --allow-missing-config`; the flag keeps branches that predate the
+config committable.
 
 ## License
 

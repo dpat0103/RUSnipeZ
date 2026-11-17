@@ -1,5 +1,5 @@
 # Runs the same ruff lint and format checks as CI before each commit.
-# Install once: uvx pre-commit install
+# Install once: uvx pre-commit install --allow-missing-config
 # Update the pinned version: uvx pre-commit autoupdate
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
