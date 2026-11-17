@@ -12,6 +12,11 @@ add features. Each version is also a GitHub release with the same notes.
 - Weekly Dependabot PRs for the website's npm packages and GitHub Actions, a pull request
   template, this changelog, and pre-commit hooks that run ruff like CI does. (#34)
 
+### Fixed
+
+- Queued alerts are due at the time the opening was seen, not by the database's clock, so
+  delivery no longer depends on the app and Postgres clocks agreeing. (#36, #37)
+
 ## [3.6.0] - 2026-11-15
 
 ### Added
