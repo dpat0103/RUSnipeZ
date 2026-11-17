@@ -37,13 +37,16 @@ CHANNEL = "alerts"
 
 async def queue_alerts(session: AsyncSession, opening_ids: Sequence[int], now: datetime) -> int:
     """One pending alert per watcher of each opening, skipping snoozed watches
-    and banned users. Returns how many were queued."""
+    and banned users. Returns how many were queued.
+
+    Alerts are due at ``now``, the poller's observation time, not the database's
+    clock: the dispatcher compares ``next_attempt_at`` against its own clock."""
     if not opening_ids:
         return 0
     queued = await session.execute(
         text("""
-            INSERT INTO alerts (watch_id, opening_id)
-            SELECT w.id, o.id
+            INSERT INTO alerts (watch_id, opening_id, next_attempt_at)
+            SELECT w.id, o.id, :now
               FROM openings o
               JOIN watches w ON w.term = o.term AND w.index = o.index
               JOIN users u ON u.id = w.user_id
