@@ -140,12 +140,13 @@ async def test_an_expired_lease_is_claimed_again(sessions) -> None:
 
 
 async def test_notify_wakes_the_running_dispatcher(sessions, database_url) -> None:
+    clock = Clock()
     notifier = FakeNotifier()
-    dispatcher = Dispatcher(sessions, [notifier])
+    dispatcher = Dispatcher(sessions, [notifier], clock=clock)
     task = asyncio.create_task(dispatcher.run(database_url, idle_seconds=60))
     try:
         await asyncio.sleep(0.5)  # listening
-        await queued(sessions, Clock(T0 + timedelta(days=3650)))
+        await queued(sessions, clock)
         for _ in range(50):
             if notifier.sent:
                 break
